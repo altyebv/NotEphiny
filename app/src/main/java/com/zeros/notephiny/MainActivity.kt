@@ -19,13 +19,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
+import com.zeros.notephiny.presentation.navigation.NavGraph
 import dagger.hilt.android.AndroidEntryPoint
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             NotephinyTheme {
                 Scaffold(
@@ -37,21 +39,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun NotephinyApp(
     modifier: Modifier = Modifier,
     viewModel: NoteListViewModel = hiltViewModel()
 ) {
+    val navController = rememberNavController()
     val notes = viewModel.notes.collectAsState().value
 
-    LazyColumn(modifier = modifier.fillMaxSize()) {
-        items(notes.size) { index ->
-            val note = notes[index]
-            Text(
-                text = "${note.title}: ${note.content}",
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-    }
+    NavGraph(
+        navController = navController,
+        notes = notes,
+        viewModel = viewModel
+    )
 }
+
+
+

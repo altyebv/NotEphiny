@@ -16,12 +16,16 @@ class NoteListViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
+
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()
+
+
+    private var recentlyDeletedNote: Note? = null
 
     init {
         getNotes()
 
-        // ⚠️ TEMP: Add a dummy note
+        // ⚠️ TEMP: Add a dummy note — remove if you no longer need this
         viewModelScope.launch {
             repository.insertNote(
                 Note(
@@ -32,19 +36,28 @@ class NoteListViewModel @Inject constructor(
         }
     }
 
-
     private fun getNotes() {
         viewModelScope.launch {
-            repository.getAllNotes()
-                .collect { noteList ->
-                    _notes.value = noteList
-                }
+            repository.getAllNotes().collect { noteList ->
+                _notes.value = noteList
+            }
         }
     }
 
     fun deleteNote(note: Note) {
         viewModelScope.launch {
             repository.deleteNote(note)
+            recentlyDeletedNote = note
+        }
+    }
+
+    fun restoreNote() {
+        viewModelScope.launch {
+            recentlyDeletedNote?.let {
+                repository.insertNote(it)
+                recentlyDeletedNote = null
+            }
         }
     }
 }
+

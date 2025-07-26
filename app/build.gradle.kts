@@ -57,6 +57,10 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
 
+    // compose navigation
+    implementation(libs.androidx.navigation.compose)
+
+
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
@@ -65,6 +69,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
 
     // Hilt
     implementation(libs.dagger.hilt.android)
