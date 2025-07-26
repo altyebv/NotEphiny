@@ -70,6 +70,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
+
     // Hilt
     implementation(libs.dagger.hilt.android)
     kapt(libs.dagger.hilt.compiler)

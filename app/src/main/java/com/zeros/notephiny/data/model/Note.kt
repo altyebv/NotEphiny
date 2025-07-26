@@ -10,5 +10,15 @@ data class Note(
     val title: String,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val color: Int = Color.Cyan.hashCode()
-)
+    val color: Int = 0xFFFFF9C4.toInt() // Light pastel yellow
+) {
+    companion object {
+        val noteColors = listOf(
+            Color(0xFFFFF59D),
+            Color(0xFF80DEEA),
+            Color(0xFFA5D6A7),
+            Color(0xFFFFAB91)
+        )
+    }
+}
+

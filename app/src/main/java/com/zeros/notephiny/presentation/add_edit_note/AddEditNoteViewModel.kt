@@ -2,6 +2,7 @@ package com.zeros.notephiny.presentation.add_edit_note
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,19 +26,28 @@ class AddEditNoteViewModel @Inject constructor(
     private val _content = mutableStateOf("")
     val content: State<String> = _content
 
+    private val _noteColor = mutableStateOf(Note.noteColors.random().toArgb()) // fallback
+    val noteColor: State<Int> = _noteColor
+
     init {
-        savedStateHandle.get<Int>("noteId")?.let { noteId ->
-            if (noteId != -1) {
-                viewModelScope.launch {
-                    noteRepository.getNoteById(noteId)?.also { note ->
-                        currentNoteId = note.id
-                        _title.value = note.title
-                        _content.value = note.content
-                    }
+        val noteId = savedStateHandle.get<Int>("noteId") ?: -1
+        val color = savedStateHandle.get<Int>("noteColor") ?: -1
+        if (color != -1) {
+            _noteColor.value = color
+        }
+
+        if (noteId != -1) {
+            viewModelScope.launch {
+                noteRepository.getNoteById(noteId)?.also { note ->
+                    currentNoteId = note.id
+                    _title.value = note.title
+                    _content.value = note.content
+                    _noteColor.value = note.color
                 }
             }
         }
     }
+
 
     fun onTitleChange(newTitle: String) {
         _title.value = newTitle
@@ -60,6 +70,7 @@ class AddEditNoteViewModel @Inject constructor(
             val note = Note(
                 title = trimmedTitle,
                 content = trimmedContent,
+                color = noteColor.value,
                 id = currentNoteId
             )
             noteRepository.insertNote(note)
