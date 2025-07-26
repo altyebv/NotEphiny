@@ -49,13 +49,27 @@ class AddEditNoteViewModel @Inject constructor(
 
     fun saveNote(onSaved: () -> Unit) {
         viewModelScope.launch {
+            val trimmedTitle = _title.value.trim()
+            val trimmedContent = _content.value.trim()
+
+            if (trimmedTitle.isBlank()) {
+                _errorMessage.value = "Title cannot be empty!"
+                return@launch
+            }
+
             val note = Note(
-                title = _title.value,
-                content = _content.value,
+                title = trimmedTitle,
+                content = trimmedContent,
                 id = currentNoteId
             )
             noteRepository.insertNote(note)
             onSaved()
         }
+    }
+    private val _errorMessage = mutableStateOf<String?>(null)
+    val errorMessage: State<String?> = _errorMessage
+
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
