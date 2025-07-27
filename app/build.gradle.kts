@@ -4,11 +4,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
     id("dagger.hilt.android.plugin")
+
 }
 
 android {
     namespace = "com.zeros.notephiny"
     compileSdk = 35
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
 
     defaultConfig {
         applicationId = "com.zeros.notephiny"
@@ -59,6 +67,10 @@ dependencies {
 
     // compose navigation
     implementation(libs.androidx.navigation.compose)
+
+    // onnx
+//    implementation(libs.onnxruntime.android)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
 
 
     // ViewModel

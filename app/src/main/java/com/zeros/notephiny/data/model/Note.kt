@@ -10,6 +10,7 @@ data class Note(
     val title: String,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
+    val embedding: List<Float>? = null,
     val color: Int = 0xFFFFF9C4.toInt() // Light pastel yellow
 ) {
     companion object {

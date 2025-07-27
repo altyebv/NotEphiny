@@ -2,6 +2,7 @@ package com.zeros.notephiny.di
 
 import android.app.Application
 import androidx.room.Room
+import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.data.local.NoteDao
 import com.zeros.notephiny.data.local.NoteDatabase
 import com.zeros.notephiny.domain.repository.NoteRepository
@@ -28,9 +29,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideNoteDao(db: NoteDatabase): NoteDao = db.noteDao
+    fun provideNoteDao(db: NoteDatabase): NoteDao = db.noteDao()
 
-    @Provides
-    @Singleton
-    fun provideNoteRepository(dao: NoteDao): NoteRepository = NoteRepository(dao)
+
 }
