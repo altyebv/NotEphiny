@@ -7,10 +7,11 @@ import com.zeros.notephiny.data.model.Note
 
 @Database(
     entities = [Note::class],
-    version = 3,
+    version = 1,
     exportSchema = false)
 
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
+
 }

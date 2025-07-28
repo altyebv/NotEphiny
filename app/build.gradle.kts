@@ -72,6 +72,9 @@ dependencies {
 //    implementation(libs.onnxruntime.android)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.16.3")
 
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+
 
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)

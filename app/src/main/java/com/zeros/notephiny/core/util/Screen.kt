@@ -1,4 +1,4 @@
-package com.zeros.notephiny.util
+package com.zeros.notephiny.core.util
 
 sealed class Screen(val route: String) {
     object NoteList : Screen("note_list")

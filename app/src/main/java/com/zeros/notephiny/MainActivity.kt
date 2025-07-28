@@ -3,23 +3,21 @@ package com.zeros.notephiny
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.zeros.notephiny.presentation.note_list.NoteListViewModel
+import com.zeros.notephiny.presentation.notes.NoteListViewModel
 import com.zeros.notephiny.ui.theme.NotephinyTheme
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.presentation.navigation.NavGraph
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -46,12 +44,12 @@ fun NotephinyApp(
 ) {
     val navController = rememberNavController()
     val notes = viewModel.notes.collectAsState().value
+    val selectedCategory = viewModel.selectedCategory.collectAsState().value
+    var noteToDelete by remember { mutableStateOf<Note?>(null) }
 
-    NavGraph(
-        navController = navController,
-        notes = notes,
-        viewModel = viewModel
-    )
+
+    NavGraph(navController = navController)
+
 }
 
 

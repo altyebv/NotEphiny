@@ -1,5 +1,6 @@
 package com.zeros.notephiny.presentation.add_edit_note
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -21,137 +22,176 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import com.zeros.notephiny.presentation.components.CategoryChips
+
 import kotlinx.coroutines.delay
-
-// Utility function to calculate luminance and pick contrasting text color
-fun getContrastingTextColor(background: Color): Color {
-    // Formula from W3C contrast guidelines
-    val luminance = (0.299 * background.red + 0.587 * background.green + 0.114 * background.blue)
-    return if (luminance > 0.5) Color.Black else Color.White
-}
-
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditNoteScreen(
-    navController: NavController,
-    noteColor: Int
+fun AddEditScreen(
+    viewModel: AddEditNoteViewModel = hiltViewModel(),
+    onNoteSaved: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val viewModel: AddEditNoteViewModel = hiltViewModel()
-    val title by viewModel.title
-    val content by viewModel.content
-    val errorMessage by viewModel.errorMessage
-    val snackbarHostState = remember { SnackbarHostState() }
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    val isDarkTheme = isSystemInDarkTheme()
-    val backgroundColor = if (noteColor != -1) Color(noteColor) else MaterialTheme.colorScheme.background
-    val containerColor = if (isDarkTheme) Color.DarkGray else Color.White
-    val textColor = if (isDarkTheme) Color.White else Color.Black
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearError()
         }
     }
 
-    Scaffold(
-        snackbarHost = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    snackbar = { data ->
-                        Snackbar(
-                            snackbarData = data,
-                            containerColor = Color(0xFF77B3F5),
-                            contentColor = Color.Black,
-                            shape = RoundedCornerShape(16.dp),
-                            actionColor = Color.Yellow
-                        )
-                    }
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // This will expand and push others downward
+        AddEditNoteFields(
+            title = uiState.title,
+            content = uiState.content,
+            onTitleChange = viewModel::onTitleChange,
+            onContentChange = viewModel::onContentChange,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AddEditNoteCategorySelector(
+            selectedCategory = uiState.category,
+            availableCategories = uiState.availableCategories,
+            onCategorySelected = viewModel::onCategoryChange
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.weight(1f))
+            AddEditSaveButton {
+                viewModel.saveNote(
+                    onSuccess = onNoteSaved,
+                    onError = { /* already handled */ }
                 )
             }
-        },
-        topBar = {
-            TopAppBar(
-                title = { Text("Add/Edit Note") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        viewModel.saveNote {
-                            navController.navigateUp()
-                        }
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save")
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backgroundColor)
-                .padding(innerPadding)
-                .padding(16.dp)
-                .imePadding()
-        ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = viewModel::onTitleChange,
-                label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                textStyle = TextStyle(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                ),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = containerColor,
-                    unfocusedContainerColor = containerColor,
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    focusedLabelColor = textColor,
-                    unfocusedLabelColor = textColor,
-                    cursorColor = textColor
-                )
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = content,
-                onValueChange = viewModel::onContentChange,
-                label = { Text("Content") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                textStyle = TextStyle(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                ),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = containerColor,
-                    unfocusedContainerColor = containerColor,
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    focusedLabelColor = textColor,
-                    unfocusedLabelColor = textColor,
-                    cursorColor = textColor
-                )
-            )
         }
     }
 }
+@Composable
+fun AddEditNoteFields(
+    title: String,
+    content: String,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = title,
+            onValueChange = onTitleChange,
+            label = { Text("Title") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = content,
+            onValueChange = onContentChange,
+            label = { Text("Content") },
+            modifier = Modifier
+                .fillMaxSize(), // Expand to fill remaining space inside this Column
+            maxLines = Int.MAX_VALUE
+        )
+    }
+}
+
+
+@Composable
+fun AddEditSaveButton(
+    onSaveClicked: () -> Unit
+) {
+    Button(onClick = onSaveClicked) {
+        Text("Save")
+    }
+}
+
+
+@Composable
+fun AddEditNoteCategorySelector(
+    selectedCategory: String,
+    availableCategories: List<String>,
+    onCategorySelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        OutlinedTextField(
+            value = selectedCategory,
+            onValueChange = {},
+            label = { Text("Category") },
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            availableCategories.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category) },
+                    onClick = {
+                        onCategorySelected(category)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+@Preview(showBackground = true)
+@Composable
+fun AddEditScreenPreview() {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
+
+        AddEditNoteFields(
+            title = "Preview Title",
+            content = "This is a preview note content.\nSupports multiple lines.",
+            onTitleChange = {},
+            onContentChange = {}
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AddEditNoteCategorySelector(
+            selectedCategory = "Work",
+            availableCategories = listOf("Work", "Personal", "Ideas"),
+            onCategorySelected = {}
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.weight(1f))
+            AddEditSaveButton(onSaveClicked = {})
+        }
+    }
+}
+
+
+
 
