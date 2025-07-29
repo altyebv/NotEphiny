@@ -24,15 +24,27 @@ class NoteListViewModel @Inject constructor(
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()
-
-    private val _categoryFilter = MutableStateFlow<String?>(null)
-    val categoryFilter = _categoryFilter.asStateFlow()
-
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     private val _selectedCategory = MutableStateFlow("All")
     val selectedCategory: StateFlow<String> = _selectedCategory
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+    val availableCategories = _notes
+        .map { notes ->
+            listOf("All") + notes.map { it.category }.distinct()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val deletedNote: Note?
-        get() = recentlyDeletedNote
+
+    val filteredNotes = combine(_notes, _selectedCategory, _searchQuery) { notes, category, query ->
+        notes.filter { note ->
+            val matchesCategory = category == "All" || note.category == category
+            val matchesQuery = note.title.contains(query, ignoreCase = true) ||
+                    note.content.contains(query, ignoreCase = true)
+            matchesCategory && matchesQuery
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     var recentlyDeletedNote: Note? = null
 
@@ -58,9 +70,23 @@ class NoteListViewModel @Inject constructor(
             }
         }
     }
+    fun startSearch() {
+        _isSearching.value = true
+    }
+
+    fun cancelSearch() {
+        _isSearching.value = false
+        _searchQuery.value = ""
+    }
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+        filteredNotes
+    }
+
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
     }
 
     fun saveNote(title: String, content: String, category: String) {

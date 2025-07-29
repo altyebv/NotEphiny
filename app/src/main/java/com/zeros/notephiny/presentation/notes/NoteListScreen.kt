@@ -2,6 +2,7 @@ package com.zeros.notephiny.presentation.notes
 
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Column
 
 import androidx.compose.material3.*
 
@@ -15,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.zeros.notephiny.data.model.Note
+import com.zeros.notephiny.presentation.components.NotesTop
 
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -23,28 +25,35 @@ fun NoteListScreen(
     navController: NavController,
     viewModel: NoteListViewModel = hiltViewModel()
 ) {
-    val notes by viewModel.notes.collectAsState()
+    val notes by viewModel.filteredNotes.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
+
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
     var lastDeletedNote by remember { mutableStateOf<Note?>(null) }
     var showUndoSnackbar by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val categories by viewModel.availableCategories.collectAsState()
 
     NoteListLayout(
         notes = notes,
-        noteToDelete = noteToDelete,
-        onDeleteRequest = { noteToDelete = it },
-        onNoteClick = { note ->
-            navController.navigate(
-                "add_edit_note?noteId=${note.id}&noteColor=${note.color}"
-            )
-        },
-        onFabClick = {
-            navController.navigate("add_edit_note")
-        },
-        snackbarHostState = snackbarHostState
+        noteToDelete = viewModel.recentlyDeletedNote,
+        onDeleteRequest = { viewModel.deleteNote(it) },
+        onNoteClick = { /* navigate */ },
+        onFabClick = { /* create note */ },
+        snackbarHostState = snackbarHostState,
+        searchQuery = searchQuery,
+        isSearching = isSearching,
+        onSearchQueryChange = viewModel::onSearchQueryChanged,
+        onCancelSearch = viewModel::cancelSearch,
+        onSearchClick = viewModel::startSearch,
+        onCategorySelected = viewModel::selectCategory,
+        onOverflowClick = { /* overflow */ },
+        selectedCategory = selectedCategory,
+        categories = categories
     )
 
-    // 🔔 Show AlertDialog if delete requested
     noteToDelete?.let { note ->
         AlertDialog(
             onDismissRequest = { noteToDelete = null },
@@ -68,7 +77,6 @@ fun NoteListScreen(
         )
     }
 
-    // ✅ Launch snackbar after deletion in a Composable-safe way
     LaunchedEffect(showUndoSnackbar) {
         if (showUndoSnackbar && lastDeletedNote != null) {
             val result = snackbarHostState.showSnackbar(
@@ -83,5 +91,6 @@ fun NoteListScreen(
         }
     }
 }
+
 
 

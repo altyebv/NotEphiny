@@ -32,10 +32,10 @@ class NoteRepository @Inject constructor(
             title = title,
             content = content,
             category = category,
-            embedding = embedding
+            embedding = embedding,
+            color = Note.noteColors.random().value.toInt()
         )
         dao.insertNote(note)
     }
-
 
 }
