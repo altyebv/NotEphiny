@@ -15,9 +15,6 @@
 local.properties
 
 # Kotlin/Java/Android
-*.iml
-.gradle
-/local.properties
 /.idea/
 /build/
 /captures/
@@ -33,3 +30,4 @@ Thumbs.db
 **/navigationDebug/
 app/src/main/assets/minilm/
 
+/app/src/main/assets/minilm.onnx
