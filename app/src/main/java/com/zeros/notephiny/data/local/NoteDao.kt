@@ -10,6 +10,10 @@ interface NoteDao {
     @Query("SELECT * FROM notes ORDER BY timestamp DESC")
     fun getAllNotes(): Flow<List<Note>>
 
+    @Query("SELECT DISTINCT category FROM notes")
+    suspend fun getAllCategories(): List<String>
+
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note)
 

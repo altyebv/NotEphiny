@@ -1,6 +1,11 @@
 package com.zeros.notephiny.presentation.components
 
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -12,9 +17,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun NotesTop(
@@ -31,13 +36,19 @@ fun NotesTop(
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        if (!isSearching) {
+        AnimatedVisibility(
+            visible = !isSearching,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+        ) {
             TopIconsRow(
                 onSearchClick = onStartSearch,
                 onMenuClick = { menuExpanded = true },
@@ -49,13 +60,16 @@ fun NotesTop(
                     onOverflowClick()
                 }
             )
-        } else {
+        }
+
+        AnimatedVisibility(visible = isSearching) {
             SearchBarRow(
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange,
                 onCancelClick = onCancelSearch
             )
         }
+
 
         Spacer(modifier = Modifier.height(12.dp))
         TitleRow(noteCount = noteCount)

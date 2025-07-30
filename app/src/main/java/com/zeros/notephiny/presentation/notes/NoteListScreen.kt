@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.zeros.notephiny.core.util.Screen
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.presentation.components.NotesTop
 
@@ -38,10 +39,16 @@ fun NoteListScreen(
 
     NoteListLayout(
         notes = notes,
-        noteToDelete = viewModel.recentlyDeletedNote,
-        onDeleteRequest = { viewModel.deleteNote(it) },
-        onNoteClick = { /* navigate */ },
-        onFabClick = { /* create note */ },
+        noteToDelete = noteToDelete,
+        onDeleteRequest = { note -> noteToDelete = note },
+        onNoteClick = { note ->
+            navController.navigate(
+                Screen.AddEditNote.route + "?noteId=${note.id}&noteColor=${note.color}"
+            )
+        },
+        onFabClick = {
+            navController.navigate("add_edit_note")
+        },
         snackbarHostState = snackbarHostState,
         searchQuery = searchQuery,
         isSearching = isSearching,

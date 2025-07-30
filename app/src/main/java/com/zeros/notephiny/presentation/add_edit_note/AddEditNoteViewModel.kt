@@ -25,6 +25,8 @@ class AddEditNoteViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AddEditNoteUiState())
     val uiState: StateFlow<AddEditNoteUiState> = _uiState
+    val availableCategories = noteRepository.getDefaultCategories()
+
 
     private var currentNoteId: Int? = null
 
@@ -44,7 +46,7 @@ class AddEditNoteViewModel @Inject constructor(
                         title = note.title,
                         content = note.content,
                         color = note.color,
-                        category = note.category ?: "Journal"
+                        category = note.category ?: "General"
                     )
                 }
             }

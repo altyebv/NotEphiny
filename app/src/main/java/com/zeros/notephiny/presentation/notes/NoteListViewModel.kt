@@ -12,7 +12,6 @@ import com.zeros.notephiny.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.lang.reflect.Modifier.PRIVATE
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,6 +21,7 @@ class NoteListViewModel @Inject constructor(
     private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
+    var recentlyDeletedNote: Note? = null
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()
     private val _searchQuery = MutableStateFlow("")
@@ -30,12 +30,10 @@ class NoteListViewModel @Inject constructor(
     val selectedCategory: StateFlow<String> = _selectedCategory
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
-    val availableCategories = _notes
-        .map { notes ->
-            listOf("All") + notes.map { it.category }.distinct()
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+//    private val _availableCategories = MutableStateFlow<List<String>>(listOf("All"))
+    private val _availableCategories = MutableStateFlow<List<String>>(emptyList())
+    val availableCategories: StateFlow<List<String>> = _availableCategories.asStateFlow()
 
     val filteredNotes = combine(_notes, _selectedCategory, _searchQuery) { notes, category, query ->
         notes.filter { note ->
@@ -46,10 +44,9 @@ class NoteListViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    var recentlyDeletedNote: Note? = null
-
     init {
-        observeNotes() // ✅ handles the logic cleanly now
+        observeNotes()
+        fetchAvailableCategories()
     }
 
     private fun observeNotes() {
@@ -70,6 +67,18 @@ class NoteListViewModel @Inject constructor(
             }
         }
     }
+
+    private fun fetchAvailableCategories() {
+        viewModelScope.launch {
+            val dbCategories = repository.getAllCategories()
+            val defaultCategories = repository.getDefaultCategories()
+            val merged = (dbCategories + defaultCategories).toSet().toList().sorted()
+            _availableCategories.value = listOf("All") + merged
+        }
+    }
+
+
+
     fun startSearch() {
         _isSearching.value = true
     }
@@ -84,7 +93,6 @@ class NoteListViewModel @Inject constructor(
         filteredNotes
     }
 
-
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }
@@ -93,6 +101,7 @@ class NoteListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.saveNoteWithEmbedding(title, content, category)
+                fetchAvailableCategories()
             } catch (e: Exception) {
                 Log.e("SaveNote", "❌ Failed to save note with embedding: ${e.message}", e)
             }
@@ -119,6 +128,7 @@ class NoteListViewModel @Inject constructor(
         viewModelScope.launch {
             recentlyDeletedNote = note
             repository.deleteNoteById(note.id)
+            fetchAvailableCategories()
         }
     }
 

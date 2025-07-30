@@ -2,14 +2,19 @@ package com.zeros.notephiny.presentation.add_edit_note
 
 import androidx.compose.ui.graphics.toArgb
 import com.zeros.notephiny.data.model.Note
+import com.zeros.notephiny.domain.repository.DefaultCategories
+import com.zeros.notephiny.domain.repository.DefaultNoteCategory
 
 data class AddEditNoteUiState(
+
     val title: String = "",
     val content: String = "",
     val color: Int = Note.noteColors.random().toArgb(),
-    val category: String = "Journal",
-    val availableCategories: List<String> = listOf("Journal", "Ideas", "Quick Notes", "Tasks"),
-    val errorMessage: String? = null
+    val category: String = DefaultNoteCategory,
+    val availableCategories: List<String> = emptyList(),
+    val errorMessage: String? = null,
+    val showDeleteDialog: Boolean = false
+
 )
 
 

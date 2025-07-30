@@ -12,12 +12,21 @@ class NoteRepository @Inject constructor(
     private val embedder: OnnxEmbedder
 ) {
 
+    fun getDefaultCategories(): List<String> = DefaultCategories
+
     fun getAllNotes(): Flow<List<Note>> = dao.getAllNotes()
 
     suspend fun insertNote(note: Note) = dao.insertNote(note)
 
+    suspend fun getAllOrDefaultCategories(): List<String> {
+        val fromDb = dao.getAllCategories()
+        return if (fromDb.isEmpty()) DefaultCategories else (fromDb + DefaultCategories).distinct()
+    }
+
+
     suspend fun deleteNoteById(noteId: Int) = dao.deleteNoteById(noteId)
 
+    suspend fun getAllCategories(): List<String> = dao.getAllCategories()
 
     suspend fun getNoteById(id: Int): Note? = dao.getNoteById(id)
 

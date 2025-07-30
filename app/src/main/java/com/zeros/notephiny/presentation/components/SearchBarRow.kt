@@ -26,9 +26,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,12 @@ fun SearchBarRow(
     onCancelClick: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
+    val focusRequester = remember { FocusRequester() }
+
+    // Automatically request focus when entering this composable
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     Box(
         modifier = Modifier
@@ -50,7 +60,7 @@ fun SearchBarRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp) // Recommended height for text fields
+                .height(56.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             verticalAlignment = Alignment.CenterVertically
@@ -74,7 +84,8 @@ fun SearchBarRow(
                 singleLine = true,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .focusRequester(focusRequester), // Attach focusRequester
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface
                 ),
@@ -95,7 +106,7 @@ fun SearchBarRow(
                 onClick = onCancelClick,
                 modifier = Modifier.padding(start = 4.dp, end = 8.dp),
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFFFFD54F) // Yellow-ish
+                    contentColor = Color(0xFFFFD54F)
                 )
             ) {
                 Text("Cancel")
@@ -103,3 +114,4 @@ fun SearchBarRow(
         }
     }
 }
+
