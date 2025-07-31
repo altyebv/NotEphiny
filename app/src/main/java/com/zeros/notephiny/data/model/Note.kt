@@ -9,7 +9,8 @@ data class Note(
     @PrimaryKey(autoGenerate = true) val id: Int? = null,
     val title: String,
     val content: String,
-    val timestamp: Long = System.currentTimeMillis(),
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
     val embedding: List<Float>? = null,
     val category: String = "Journal",
     val color: Int = 0xFFFFF9C4.toInt() // Light pastel yellow

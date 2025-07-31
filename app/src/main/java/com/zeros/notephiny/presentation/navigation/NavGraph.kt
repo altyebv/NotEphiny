@@ -10,6 +10,7 @@ import com.zeros.notephiny.presentation.add_edit_note.AddEditScreen
 import com.zeros.notephiny.presentation.notes.NoteListScreen
 import com.zeros.notephiny.presentation.notes.NoteListViewModel
 import com.zeros.notephiny.core.util.Screen
+import com.zeros.notephiny.presentation.add_edit_note.NoteScreen
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -32,8 +33,9 @@ fun NavGraph(navController: NavHostController) {
                     defaultValue = -1
                 }
             )
-        ) {
-            AddEditScreen(
+        ) { backStackEntry ->
+
+            NoteScreen(
                 onNoteSaved = {
                     navController.popBackStack()
                 }
@@ -41,3 +43,4 @@ fun NavGraph(navController: NavHostController) {
         }
     }
 }
+

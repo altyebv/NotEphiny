@@ -31,3 +31,4 @@ Thumbs.db
 app/src/main/assets/minilm/
 
 /app/src/main/assets/minilm.onnx
+/app/src/main/java/com/zeros/notephiny/Temps.kt

@@ -34,17 +34,29 @@ class NoteRepository @Inject constructor(
         return dao.getNotesCount()
     }
 
-    suspend fun saveNoteWithEmbedding(title: String, content: String, category: String) {
+    suspend fun saveNoteWithEmbedding(
+        id: Int? = null,
+        title: String,
+        content: String,
+        category: String,
+        color: Int,
+        createdAt: Long? = null,
+        updatedAt: Long = System.currentTimeMillis()
+    ) {
         val text = "$title $content $category"
         val embedding = embedder.embed(text).toList()
         val note = Note(
+            id = id,
             title = title,
             content = content,
             category = category,
             embedding = embedding,
-            color = Note.noteColors.random().value.toInt()
+            color = color,
+            createdAt = createdAt ?: System.currentTimeMillis(),
+            updatedAt = updatedAt
         )
         dao.insertNote(note)
     }
+
 
 }

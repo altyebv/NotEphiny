@@ -11,9 +11,16 @@ data class AddEditNoteUiState(
     val content: String = "",
     val color: Int = Note.noteColors.random().toArgb(),
     val category: String = DefaultNoteCategory,
+    val createdAt: Long? = null,
+    val updatedAt: Long? = null,
     val availableCategories: List<String> = emptyList(),
     val errorMessage: String? = null,
-    val showDeleteDialog: Boolean = false
+    val showDeleteDialog: Boolean = false,
+    val isEdited: Boolean = false,
+    val isMoreMenuVisible: Boolean = false,
+    val isShareMenuVisible: Boolean = false
+
+
 
 )
 

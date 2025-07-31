@@ -77,48 +77,6 @@ class NoteListViewModel @Inject constructor(
         }
     }
 
-
-
-    fun startSearch() {
-        _isSearching.value = true
-    }
-
-    fun cancelSearch() {
-        _isSearching.value = false
-        _searchQuery.value = ""
-    }
-
-    fun selectCategory(category: String) {
-        _selectedCategory.value = category
-        filteredNotes
-    }
-
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun saveNote(title: String, content: String, category: String) {
-        viewModelScope.launch {
-            try {
-                repository.saveNoteWithEmbedding(title, content, category)
-                fetchAvailableCategories()
-            } catch (e: Exception) {
-                Log.e("SaveNote", "❌ Failed to save note with embedding: ${e.message}", e)
-            }
-        }
-    }
-
-    fun embedNoteContent(note: Note) {
-        viewModelScope.launch {
-            try {
-                val vector = embedder.embed(note.content)
-                Log.d("Embedder", "✅ Embedding for note: ${note.title} = ${vector.joinToString(prefix = "[", postfix = "]")}")
-            } catch (e: Exception) {
-                Log.e("Embedder", "❌ Embedding failed: ${e.message}", e)
-            }
-        }
-    }
-
     fun deleteNote(note: Note) {
         Log.d("NoteDelete", "Attempting to delete note with ID: ${note.id}")
         if (note.id == null) {
@@ -139,6 +97,24 @@ class NoteListViewModel @Inject constructor(
                 recentlyDeletedNote = null
             }
         }
+    }
+
+    fun startSearch() {
+        _isSearching.value = true
+    }
+
+    fun cancelSearch() {
+        _isSearching.value = false
+        _searchQuery.value = ""
+    }
+
+    fun selectCategory(category: String) {
+        _selectedCategory.value = category
+        filteredNotes
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
     }
 }
 
