@@ -19,9 +19,6 @@ data class AddEditNoteUiState(
     val isEdited: Boolean = false,
     val isMoreMenuVisible: Boolean = false,
     val isShareMenuVisible: Boolean = false
-
-
-
 )
 
 

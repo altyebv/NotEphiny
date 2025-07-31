@@ -44,6 +44,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.zeros.notephiny.presentation.components.menus.GenericDropdownMenu
+import com.zeros.notephiny.presentation.components.menus.MenuAction
+import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
+import com.zeros.notephiny.presentation.components.menus.label
 
 @Composable
 fun NoteScreen(
@@ -153,8 +157,14 @@ fun NoteTopSection(
 
                             NoteDropdownMenu(
                                 expanded = isMenuExpanded,
-                                onDismiss = { isMenuExpanded = false }
+                                onDismiss = { isMenuExpanded = false },
+                                onMenuItemClick = { action ->
+                                    isMenuExpanded = false
+                                    println("NoteScreenMenu selected: $action")
+                                    // TODO: Handle actions like Find, Pin, Move, Delete
+                                }
                             )
+
                         }
 
 
@@ -254,30 +264,21 @@ fun NoteEditorSection(
 @Composable
 fun NoteDropdownMenu(
     expanded: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onMenuItemClick: (NoteScreenMenu) -> Unit
 ) {
-    DropdownMenu(
+    GenericDropdownMenu(
         expanded = expanded,
-        onDismissRequest = onDismiss
-    ) {
-        DropdownMenuItem(
-            text = { Text("Find") },
-            onClick = { /* TODO: Implement Find */ }
-        )
-        DropdownMenuItem(
-            text = { Text("Pin") },
-            onClick = { /* TODO: Implement Pin */ }
-        )
-        DropdownMenuItem(
-            text = { Text("Move") },
-            onClick = { /* TODO: Implement Move */ }
-        )
-        DropdownMenuItem(
-            text = { Text("Delete") },
-            onClick = { /* TODO: Implement Delete */ }
-        )
-    }
+        onDismiss = onDismiss,
+        actions = NoteScreenMenu.values().map { action ->
+            MenuAction(
+                label = action.label(),
+                onClick = { onMenuItemClick(action) }
+            )
+        }
+    )
 }
+
 
 @Preview(showBackground = true)
 @Composable

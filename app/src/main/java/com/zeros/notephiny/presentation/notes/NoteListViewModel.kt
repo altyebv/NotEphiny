@@ -3,12 +3,14 @@ package com.zeros.notephiny.presentation.notes
 
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.core.util.PreferencesManager
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.domain.repository.NoteRepository
+import com.zeros.notephiny.presentation.components.menus.MainScreenMenu
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -30,19 +32,50 @@ class NoteListViewModel @Inject constructor(
     val selectedCategory: StateFlow<String> = _selectedCategory
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+    private val _uiState = MutableStateFlow(NoteListUiState())
+    val uiState: StateFlow<NoteListUiState> = _uiState.asStateFlow()
 
-//    private val _availableCategories = MutableStateFlow<List<String>>(listOf("All"))
+
+    enum class SortOrder {
+        CREATED,
+        EDITED
+    }
+
+    enum class NoteListMode {
+        NORMAL,
+        MULTI_SELECT
+    }
+
+
+
+
     private val _availableCategories = MutableStateFlow<List<String>>(emptyList())
     val availableCategories: StateFlow<List<String>> = _availableCategories.asStateFlow()
 
-    val filteredNotes = combine(_notes, _selectedCategory, _searchQuery) { notes, category, query ->
-        notes.filter { note ->
+
+    val filteredNotes = combine(
+        _notes,
+        _selectedCategory,
+        _searchQuery,
+        _uiState
+    ) { notes, category, query, uiState ->
+
+        val filtered = notes.filter { note ->
             val matchesCategory = category == "All" || note.category == category
-            val matchesQuery = note.title.contains(query, ignoreCase = true) ||
-                    note.content.contains(query, ignoreCase = true)
+            val matchesQuery = note.title.contains(query, true) || note.content.contains(query, true)
             matchesCategory && matchesQuery
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        when (uiState.sortOrder) {
+            SortOrder.CREATED -> filtered.sortedByDescending { it.createdAt }
+            SortOrder.EDITED -> filtered.sortedByDescending { it.updatedAt }
+        }
+    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+
+
+
 
     init {
         observeNotes()
@@ -67,6 +100,26 @@ class NoteListViewModel @Inject constructor(
             }
         }
     }
+
+    fun onMainMenuAction(action: MainScreenMenu) {
+        when (action) {
+
+            MainScreenMenu.SortByCreated -> {
+                _uiState.update { it.copy(sortOrder = SortOrder.CREATED) }
+            }
+            MainScreenMenu.SortByEdited -> {
+                _uiState.update { it.copy(sortOrder = SortOrder.EDITED) }
+            }
+            MainScreenMenu.Edit -> {
+                enterMultiSelectMode()
+            }
+            MainScreenMenu.Settings -> {
+                // TODO: Navigate to settings screen
+            }
+        }
+    }
+
+
 
     private fun fetchAvailableCategories() {
         viewModelScope.launch {
@@ -99,6 +152,40 @@ class NoteListViewModel @Inject constructor(
         }
     }
 
+    fun enterMultiSelectMode() {
+        _uiState.update { it.copy(mode = NoteListMode.MULTI_SELECT) }
+    }
+
+    fun exitMultiSelectMode() {
+        _uiState.update {
+            it.copy(
+                mode = NoteListMode.NORMAL,
+                selectedNoteIds = emptySet()
+            )
+        }
+    }
+
+    fun toggleNoteSelection(noteId: Int) {
+        _uiState.update { current ->
+            val updated = current.selectedNoteIds.toMutableSet()
+            if (updated.contains(noteId)) updated.remove(noteId)
+            else updated.add(noteId)
+
+            current.copy(selectedNoteIds = updated)
+        }
+    }
+
+
+    fun selectAll() {
+        val allNoteIds = _uiState.value.notes.mapNotNull { it.id }.toSet()
+        _uiState.update { it.copy(selectedNoteIds = allNoteIds) }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedNoteIds = emptySet()) }
+    }
+
+
     fun startSearch() {
         _isSearching.value = true
     }
@@ -116,5 +203,6 @@ class NoteListViewModel @Inject constructor(
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }
+
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 @Composable
 fun NoteListContent(
     notes: List<Note>,
+    selectedNoteIds: Set<Int>,
     onNoteClick: (Note) -> Unit,
     onDeleteRequest: (Note) -> Unit,
     modifier: Modifier = Modifier
@@ -33,7 +34,9 @@ fun NoteListContent(
             NoteItem(
                 note = note,
                 onClick = { onNoteClick(note) },
-                onLongPress = { onDeleteRequest(note) }
+                onLongPress = { onDeleteRequest(note) },
+                isSelected = note.id in selectedNoteIds,
+
             )
         }
     }
@@ -54,6 +57,8 @@ fun NoteListContentPreview() {
     NoteListContent(
         notes = sampleNotes,
         onNoteClick = {},
-        onDeleteRequest = {}
+        onDeleteRequest = {},
+        selectedNoteIds = setOf(1, 3),
+
     )
 }

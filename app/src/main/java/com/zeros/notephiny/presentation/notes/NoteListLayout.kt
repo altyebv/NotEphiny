@@ -3,25 +3,22 @@ package com.zeros.notephiny.presentation.notes
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-
 import androidx.compose.foundation.layout.padding
-
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-
 import androidx.compose.runtime.Composable
-
 import androidx.compose.ui.Modifier
-
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.presentation.components.NotesTop
+import com.zeros.notephiny.presentation.components.menus.MainScreenMenu
+import com.zeros.notephiny.presentation.notes.NoteListViewModel.SortOrder
+import  com.zeros.notephiny.presentation.notes.NoteListUiState
+import com.zeros.notephiny.presentation.notes.NoteListViewModel.NoteListMode
 
 @Composable
 fun NoteListLayout(
@@ -37,10 +34,18 @@ fun NoteListLayout(
     onCancelSearch: () -> Unit,
     onSearchClick: () -> Unit,
     onCategorySelected: (String) -> Unit,
-    onOverflowClick: () -> Unit,
+    onOverflowClick: (MainScreenMenu) -> Unit,
     selectedCategory: String,
-    categories: List<String>
+    categories: List<String>,
+    sortOrder: SortOrder,
+    selectedNoteIds: Set<Int>,
+    mode: NoteListMode,
+    onCancelMultiSelect: () -> Unit,
+    onSelectAll: () -> Unit,
+
 ) {
+
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -58,39 +63,28 @@ fun NoteListLayout(
                 onCancelSearch = onCancelSearch,
                 onStartSearch = onSearchClick,
                 onCategorySelected = onCategorySelected,
-                onOverflowClick = onOverflowClick,
+                onOverflowClick = { action ->
+                    onOverflowClick(action)
+                },
                 selectedCategory = selectedCategory,
-                categories = categories // ✅ this stays
+                categories = categories,
+                sortOrder = sortOrder,
+                mode = mode,
+                onCancelMultiSelect = onCancelMultiSelect,
+                selectedNoteIds = selectedNoteIds,
+                onSelectAll = onSelectAll,
+
             )
 
             NoteListContent(
                 notes = notes,
                 onNoteClick = onNoteClick,
                 onDeleteRequest = onDeleteRequest,
+                selectedNoteIds = selectedNoteIds,
                 modifier = Modifier.fillMaxSize()
             )
         }
     }
 }
-
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun NoteListLayoutPreview() {
-//    val mockNotes = listOf(
-//        Note(id = 1, title = "Note 1", content = "This is note 1"),
-//        Note(id = 2, title = "Note 2", content = "This is note 2"),
-//    )
-//
-//    NoteListLayout(
-//        notes = mockNotes,
-//        noteToDelete = null,
-//        onDeleteRequest = {},
-//        onNoteClick = {},
-//        onFabClick = {},
-//        snackbarHostState = remember { SnackbarHostState() },
-//    )
-//}
 
 

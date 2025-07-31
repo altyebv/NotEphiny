@@ -1,11 +1,13 @@
 package com.zeros.notephiny.presentation.components
 
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,59 +22,98 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-
+import com.zeros.notephiny.presentation.components.menus.GenericDropdownMenu
+import com.zeros.notephiny.presentation.components.menus.MainScreenMenu
+import com.zeros.notephiny.presentation.components.menus.MenuAction
+import com.zeros.notephiny.presentation.components.menus.label
+import com.zeros.notephiny.presentation.notes.NoteListViewModel.NoteListMode
+import com.zeros.notephiny.presentation.notes.NoteListViewModel.SortOrder
 @Composable
 fun NotesTop(
     noteCount: Int,
+    mode: NoteListMode,
     searchQuery: String,
     isSearching: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onCancelSearch: () -> Unit,
     onStartSearch: () -> Unit,
     onCategorySelected: (String) -> Unit,
-    onOverflowClick: () -> Unit,
+    onOverflowClick: (MainScreenMenu) -> Unit,
     selectedCategory: String,
     categories: List<String>,
-    modifier: Modifier = Modifier
+    sortOrder: SortOrder,
+    selectedNoteIds: Set<Int> = emptySet(),
+    onCancelMultiSelect: () -> Unit = {},
+    onSelectAll: () -> Unit = {},
+    modifier: Modifier = Modifier,
+
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    var isSearchActive by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        AnimatedVisibility(
-            visible = !isSearching,
-            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
-        ) {
-            TopIconsRow(
-                onSearchClick = onStartSearch,
-                onMenuClick = { menuExpanded = true },
-                menuExpanded = menuExpanded,
-                onMenuDismissRequest = { menuExpanded = false },
-                onMenuItemClick = { action ->
-                    println("Menu action selected: $action")
-                    menuExpanded = false
-                    onOverflowClick()
+
+        AnimatedContent(
+            targetState = mode,
+            transitionSpec = {
+                fadeIn() + slideInVertically { -it } togetherWith
+                        fadeOut() + slideOutVertically { -it }
+            },
+            label = "TopContentSwitcher"
+        ) { currentMode ->
+            when (currentMode) {
+                NoteListMode.NORMAL -> {
+                    Column {
+                        if (isSearching) {
+                            SearchBarRow(
+                                query = searchQuery,
+                                onQueryChange = onSearchQueryChange,
+                                onCancelClick = onCancelSearch
+                            )
+                        } else {
+                            TopIconsRow(
+                                onSearchClick = onStartSearch,
+                                onMenuClick = { menuExpanded = true },
+                                menuExpanded = menuExpanded,
+                                onMenuDismissRequest = { menuExpanded = false },
+                                onMenuItemClick = { action ->
+                                    menuExpanded = false
+                                    onOverflowClick(action)
+                                },
+                                sortOrder = sortOrder
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        TitleWithCountRow(title = "Notes", count = noteCount)
+
+                    }
                 }
-            )
+
+                NoteListMode.MULTI_SELECT -> {
+                    Column {
+                        MultiSelectIconsRow(
+                            selectedCount = selectedNoteIds.size,
+                            onCancel = onCancelMultiSelect,
+                            onSelectAll = onSelectAll
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TitleWithCountRow(
+                            title = if (selectedNoteIds.isEmpty()) "Select items" else "${selectedNoteIds.size} selected",
+                            selectedNoteIds = selectedNoteIds,
+                            showCount = false
+                        )
+                    }
+                }
+            }
         }
 
-        AnimatedVisibility(visible = isSearching) {
-            SearchBarRow(
-                query = searchQuery,
-                onQueryChange = onSearchQueryChange,
-                onCancelClick = onCancelSearch
-            )
-        }
-
-
-        Spacer(modifier = Modifier.height(12.dp))
-        TitleRow(noteCount = noteCount)
         Spacer(modifier = Modifier.height(16.dp))
 
         CategoryRow(
@@ -89,9 +130,7 @@ private fun CategoryRow(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.Home,
             contentDescription = "Categories",
@@ -124,17 +163,14 @@ private fun CategoryRow(
     }
 }
 
-enum class MenuAction {
-    Edit, Settings, SortByCreated, SortByEdited
-}
-
 @Composable
 private fun TopIconsRow(
     onSearchClick: () -> Unit,
     onMenuClick: () -> Unit,
     menuExpanded: Boolean,
     onMenuDismissRequest: () -> Unit,
-    onMenuItemClick: (MenuAction) -> Unit
+    onMenuItemClick: (MainScreenMenu) -> Unit,
+    sortOrder: SortOrder
 ) {
     Row(
         modifier = Modifier
@@ -147,57 +183,113 @@ private fun TopIconsRow(
             Icon(Icons.Default.Search, contentDescription = "Search")
         }
 
-        // 🟡 Wrap the IconButton and DropdownMenu in a Box
         Box {
             IconButton(onClick = onMenuClick) {
                 Icon(Icons.Default.MoreVert, contentDescription = "More Options")
             }
 
-            DropdownMenu(
+            GenericDropdownMenu(
                 expanded = menuExpanded,
-                onDismissRequest = onMenuDismissRequest,
-                offset = DpOffset(x = 0.dp, y = 8.dp)
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Edit") },
-                    onClick = { onMenuItemClick(MenuAction.Edit) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Settings") },
-                    onClick = { onMenuItemClick(MenuAction.Settings) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Sort by Time Created") },
-                    onClick = { onMenuItemClick(MenuAction.SortByCreated) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Sort by Time Edited") },
-                    onClick = { onMenuItemClick(MenuAction.SortByEdited) }
-                )
-            }
+                onDismiss = onMenuDismissRequest,
+                actions = MainScreenMenu.entries.map { item ->
+                    MenuAction(
+                        label = item.label(),
+                        onClick = { onMenuItemClick(item) },
+                        isSelected = when (item) {
+                            MainScreenMenu.SortByCreated -> sortOrder == SortOrder.CREATED
+                            MainScreenMenu.SortByEdited -> sortOrder == SortOrder.EDITED
+                            else -> false
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MultiSelectIconsRow(
+    onCancel: () -> Unit,
+    onSelectAll: () -> Unit,
+    selectedCount: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextButton(onClick = onCancel) {
+            Text("Cancel", style = MaterialTheme.typography.labelLarge)
+        }
+
+        TextButton(onClick = onSelectAll) {
+            Text("Select All", style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
+private fun TitleWithCountRow(
+    title: String,
+    count: Int? = null,
+    selectedNoteIds: Set<Int>? = null,
+    showCount: Boolean = true,
+) {
+    val resolvedCount = selectedNoteIds?.size ?: count
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineLarge
+        )
+        if (showCount && (resolvedCount ?: 0) > 0) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "(${resolvedCount})",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 
 
-@Composable
-private fun TitleRow(noteCount: Int) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Notes",
-            style = MaterialTheme.typography.headlineLarge
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "($noteCount)",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
+
+//@Composable
+//private fun MultiSelectTitleRow(selectedCount: Int) {
+//    Row(
+//        verticalAlignment = Alignment.CenterVertically,
+//        modifier = Modifier.padding(top = 4.dp)
+//    ) {
+//        Text(
+//            text = if (selectedCount == 0) "Select items" else "$selectedCount selected",
+//            style = MaterialTheme.typography.headlineLarge
+//        )
+//    }
+//}
+
+//@Composable
+//private fun TitleRow(noteCount: Int) {
+//    Row(
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        Text(
+//            text = "Notes",
+//            style = MaterialTheme.typography.headlineLarge
+//        )
+//        Spacer(modifier = Modifier.width(8.dp))
+//        Text(
+//            text = "($noteCount)",
+//            style = MaterialTheme.typography.titleMedium,
+//            color = MaterialTheme.colorScheme.onSurfaceVariant
+//        )
+//    }
+//}
+
 
 
 
