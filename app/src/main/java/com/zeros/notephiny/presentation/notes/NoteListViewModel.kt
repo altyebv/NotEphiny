@@ -24,8 +24,6 @@ class NoteListViewModel @Inject constructor(
 ) : ViewModel() {
 
     var recentlyDeletedNote: Note? = null
-    private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    val notes: StateFlow<List<Note>> = _notes.asStateFlow()
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     private val _selectedCategory = MutableStateFlow("All")
@@ -34,7 +32,14 @@ class NoteListViewModel @Inject constructor(
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
     private val _uiState = MutableStateFlow(NoteListUiState())
     val uiState: StateFlow<NoteListUiState> = _uiState.asStateFlow()
+    private val _availableCategories = MutableStateFlow<List<String>>(emptyList())
+    val availableCategories: StateFlow<List<String>> = _availableCategories.asStateFlow()
+    private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
+    val navigationEvent = _navigationEvent.asSharedFlow()
 
+    sealed class NavigationEvent {
+        object GoToSettings : NavigationEvent()
+    }
 
     enum class SortOrder {
         CREATED,
@@ -46,19 +51,13 @@ class NoteListViewModel @Inject constructor(
         MULTI_SELECT
     }
 
-
-
-
-    private val _availableCategories = MutableStateFlow<List<String>>(emptyList())
-    val availableCategories: StateFlow<List<String>> = _availableCategories.asStateFlow()
-
-
     val filteredNotes = combine(
-        _notes,
+        _uiState,
         _selectedCategory,
-        _searchQuery,
-        _uiState
-    ) { notes, category, query, uiState ->
+        _searchQuery
+    ) { uiState, category, query ->
+
+        val notes = uiState.notes
 
         val filtered = notes.filter { note ->
             val matchesCategory = category == "All" || note.category == category
@@ -67,13 +66,18 @@ class NoteListViewModel @Inject constructor(
         }
 
         when (uiState.sortOrder) {
-            SortOrder.CREATED -> filtered.sortedByDescending { it.createdAt }
-            SortOrder.EDITED -> filtered.sortedByDescending { it.updatedAt }
+            SortOrder.CREATED -> filtered.sortedWith(
+                compareByDescending<Note> { it.isPinned }
+                    .thenByDescending { it.createdAt }
+            )
+            SortOrder.EDITED -> filtered.sortedWith(
+                compareByDescending<Note> { it.isPinned }
+                    .thenByDescending { it.updatedAt }
+            )
         }
+
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-
 
 
 
@@ -86,7 +90,6 @@ class NoteListViewModel @Inject constructor(
         viewModelScope.launch {
             repository.getAllNotes().collect { noteList ->
                 if (noteList.isEmpty() && !preferencesManager.hasAddedWelcomeNote()) {
-                    // ✅ Add welcome note once if DB is empty
                     val welcomeNote = Note(
                         title = "Welcome to Notephiny",
                         content = "This is your first note!",
@@ -95,11 +98,17 @@ class NoteListViewModel @Inject constructor(
                     repository.insertNote(welcomeNote)
                     preferencesManager.setWelcomeNoteAdded()
                 } else {
-                    _notes.value = noteList
+                    val sortedNotes = noteList.sortedWith(
+                        compareByDescending<Note> { it.isPinned }
+                            .thenByDescending { it.updatedAt }
+                    )
+                    _uiState.update { it.copy(notes = sortedNotes) }
                 }
             }
         }
     }
+
+
 
     fun onMainMenuAction(action: MainScreenMenu) {
         when (action) {
@@ -114,10 +123,15 @@ class NoteListViewModel @Inject constructor(
                 enterMultiSelectMode()
             }
             MainScreenMenu.Settings -> {
-                // TODO: Navigate to settings screen
+                viewModelScope.launch {
+                    _navigationEvent.emit(NavigationEvent.GoToSettings)
+                }
             }
         }
     }
+
+
+
 
 
 
@@ -179,10 +193,10 @@ class NoteListViewModel @Inject constructor(
     fun selectAll() {
         val allNoteIds = _uiState.value.notes.mapNotNull { it.id }.toSet()
         _uiState.update { it.copy(selectedNoteIds = allNoteIds) }
-    }
 
-    fun clearSelection() {
-        _uiState.update { it.copy(selectedNoteIds = emptySet()) }
+        val notes = _uiState.value.notes
+        Log.d("NoteDebug", "Notes count: ${notes.size}")
+        Log.d("NoteDebug", "All note IDs: $allNoteIds")
     }
 
 

@@ -58,7 +58,7 @@ fun NoteListContentPreview() {
         notes = sampleNotes,
         onNoteClick = {},
         onDeleteRequest = {},
-        selectedNoteIds = setOf(1, 3),
+        selectedNoteIds = setOf(1, 3,2),
 
     )
 }

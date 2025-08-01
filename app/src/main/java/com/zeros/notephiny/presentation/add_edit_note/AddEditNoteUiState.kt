@@ -17,8 +17,13 @@ data class AddEditNoteUiState(
     val errorMessage: String? = null,
     val showDeleteDialog: Boolean = false,
     val isEdited: Boolean = false,
+    val isPinned: Boolean = false,
     val isMoreMenuVisible: Boolean = false,
-    val isShareMenuVisible: Boolean = false
+    val isShareMenuVisible: Boolean = false,
+    val isFindMode: Boolean = false,
+    val findQuery: String = ""
+
 )
+
 
 

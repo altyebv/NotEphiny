@@ -43,7 +43,7 @@ fun NotephinyApp(
     viewModel: NoteListViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val notes = viewModel.notes.collectAsState().value
+    val notes by viewModel.filteredNotes.collectAsState()
     val selectedCategory = viewModel.selectedCategory.collectAsState().value
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
 

@@ -43,7 +43,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.zIndex
+import com.zeros.notephiny.data.model.Note
+import com.zeros.notephiny.presentation.components.HighlightedText
+import com.zeros.notephiny.presentation.components.SearchBarRow
 import com.zeros.notephiny.presentation.components.menus.GenericDropdownMenu
 import com.zeros.notephiny.presentation.components.menus.MenuAction
 import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
@@ -54,7 +61,8 @@ fun NoteScreen(
     viewModel: AddEditNoteViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
     onNoteSaved: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    category: String
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -91,22 +99,49 @@ fun NoteScreen(
                         Log.e("NoteSave", message)
                     }
                 )
-            }
+            },
+            onMenuAction = viewModel::onMenuAction,
+            isPinned = uiState.isPinned,
+            isFindMode = uiState.isFindMode,
+            findQuery = uiState.findQuery,
+            onQueryChange = viewModel::onFindQueryChanged,
+            onCancelClick = viewModel::exitFindMode
         )
 
         Spacer(Modifier.height(16.dp))
 
-        NoteEditorSection(
-            title = uiState.title,
-            onTitleChange = viewModel::onTitleChange,
-            content = uiState.content,
-            onContentChange = viewModel::onContentChange
-        )
+        Box(modifier = Modifier.weight(1f)) {
+            NoteEditorSection(
+                title = uiState.title,
+                onTitleChange = viewModel::onTitleChange,
+                content = uiState.content,
+                onContentChange = viewModel::onContentChange,
+                modifier = Modifier.fillMaxSize(),
+                isFindMode = uiState.isFindMode,
+                findQuery = uiState.findQuery
+            )
+
+            if (uiState.isFindMode && uiState.findQuery.isBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                        .blur(12.dp) // Apply blur effect
+                        .zIndex(1f)
+                )
+            }
+        }
+
+
     }
 }
-
-
-
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,6 +151,12 @@ fun NoteTopSection(
     category: String,
     onBack: () -> Unit,
     onSaveClick: () -> Unit,
+    isFindMode: Boolean,
+    findQuery: String,
+    onMenuAction: (NoteScreenMenu) -> Unit,
+    isPinned: Boolean,
+    onQueryChange: (String) -> Unit,
+    onCancelClick: () -> Unit
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     var isShareSheetVisible by remember { mutableStateOf(false) }
@@ -123,60 +164,67 @@ fun NoteTopSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding() // pushes content below the status bar
+            .statusBarsPadding()
             .padding(horizontal = 8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-            }
+        if (isFindMode) {
+            SearchBarRow(
+                query = findQuery,
+                onQueryChange = onQueryChange,
+                onCancelClick = onCancelClick,
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedContent(
-                    targetState = isEdited,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "NoteTopActionTransition"
-                ) { editing ->
-                    Row {
-                        if (!editing) {
-                            IconButton(onClick = { isShareSheetVisible = true }) {
-                                Icon(Icons.Default.Share, contentDescription = "Share")
-                            }
-                        }
-
-                        Box {
-                            IconButton(onClick = { isMenuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More")
-                            }
-
-                            NoteDropdownMenu(
-                                expanded = isMenuExpanded,
-                                onDismiss = { isMenuExpanded = false },
-                                onMenuItemClick = { action ->
-                                    isMenuExpanded = false
-                                    println("NoteScreenMenu selected: $action")
-                                    // TODO: Handle actions like Find, Pin, Move, Delete
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AnimatedContent(
+                        targetState = isEdited,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "NoteTopActionTransition"
+                    ) { editing ->
+                        Row {
+                            if (!editing) {
+                                IconButton(onClick = { isShareSheetVisible = true }) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share")
                                 }
-                            )
+                            }
 
-                        }
+                            Box {
+                                IconButton(onClick = { isMenuExpanded = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                                }
 
+                                NoteDropdownMenu(
+                                    expanded = isMenuExpanded,
+                                    onDismiss = { isMenuExpanded = false },
+                                    onMenuItemClick = { action ->
+                                        isMenuExpanded = false
+                                        onMenuAction(action)
+                                    },
+                                    isPinned = isPinned
+                                )
+                            }
 
-                        if (editing) {
-                            IconButton(onClick = onSaveClick) {
-                                Icon(Icons.Default.Check, contentDescription = "Save")
+                            if (editing) {
+                                IconButton(onClick = onSaveClick) {
+                                    Icon(Icons.Default.Check, contentDescription = "Save")
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
 
         Text(
             text = "$dateTime | $category",
@@ -213,9 +261,13 @@ fun NoteEditorSection(
     onTitleChange: (String) -> Unit,
     content: String,
     onContentChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFindMode: Boolean = false,
+    findQuery: String = "",
+
 ) {
     Column(modifier = modifier.padding(top = 16.dp)) {
+
         BasicTextField(
             value = title,
             onValueChange = onTitleChange,
@@ -255,24 +307,40 @@ fun NoteEditorSection(
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
                         )
                     )
+                } else if (isFindMode && findQuery.isNotBlank()) {
+                    HighlightedText(
+                        text = content,
+                        query = findQuery,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+                } else {
+                    innerTextField()
                 }
-                innerTextField()
             }
         )
+
     }
 }
 @Composable
 fun NoteDropdownMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
-    onMenuItemClick: (NoteScreenMenu) -> Unit
+    onMenuItemClick: (NoteScreenMenu) -> Unit,
+    isPinned: Boolean
 ) {
     GenericDropdownMenu(
         expanded = expanded,
         onDismiss = onDismiss,
         actions = NoteScreenMenu.values().map { action ->
+            val label = when (action) {
+                NoteScreenMenu.Pin -> if (isPinned) "Unpin" else "Pin"
+                else -> action.label()
+            }
+
             MenuAction(
-                label = action.label(),
+                label = label,
                 onClick = { onMenuItemClick(action) }
             )
         }
@@ -280,11 +348,7 @@ fun NoteDropdownMenu(
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun NoteScreenPreview() {
-    NoteScreen()
-}
+
 
 
 

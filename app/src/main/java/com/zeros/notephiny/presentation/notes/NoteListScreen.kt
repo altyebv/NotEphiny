@@ -15,6 +15,11 @@ import com.zeros.notephiny.core.util.Screen
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.presentation.notes.NoteListViewModel.NoteListMode
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.flowWithLifecycle
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 
 
@@ -53,7 +58,11 @@ fun NoteListScreen(
             }
         },
         onFabClick = {
-            navController.navigate("add_edit_note")
+            navController.navigate(
+                Screen.AddEditNote.route +
+                        "?noteId=-1&noteColor=-1&category=${URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
+                        }"
+            )
         },
         snackbarHostState = snackbarHostState,
         searchQuery = searchQuery,
@@ -69,7 +78,7 @@ fun NoteListScreen(
         selectedNoteIds = state.selectedNoteIds,
         mode = state.mode,
         onCancelMultiSelect = viewModel::exitMultiSelectMode,
-        onSelectAll = viewModel::selectAll
+        onSelectAll = { viewModel.selectAll() }
     )
 
     noteToDelete?.let { note ->
@@ -94,6 +103,20 @@ fun NoteListScreen(
             }
         )
     }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent
+            .flowWithLifecycle(lifecycleOwner.lifecycle, Lifecycle.State.STARTED)
+            .collect { event ->
+                when (event) {
+                    is NoteListViewModel.NavigationEvent.GoToSettings -> {
+                        navController.navigate(Screen.Settings.route)
+                    }
+                }
+            }
+    }
+
 
     LaunchedEffect(showUndoSnackbar) {
         if (showUndoSnackbar && lastDeletedNote != null) {

@@ -13,7 +13,8 @@ data class Note(
     val updatedAt: Long = System.currentTimeMillis(),
     val embedding: List<Float>? = null,
     val category: String = "Journal",
-    val color: Int = 0xFFFFF9C4.toInt() // Light pastel yellow
+    val color: Int = 0xFFFFF9C4.toInt(),
+    val isPinned: Boolean = false
 ) {
     companion object {
         val noteColors = listOf(

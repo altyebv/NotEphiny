@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.zeros.notephiny.core.util.formatDateTime
+import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
 import kotlinx.coroutines.flow.update
 
 
@@ -37,6 +38,8 @@ class AddEditNoteViewModel @Inject constructor(
     init {
         val noteId = savedStateHandle.get<Int>("noteId") ?: -1
         val color = savedStateHandle.get<Int>("noteColor") ?: -1
+        val initialCategory = savedStateHandle.get<String>("category") ?: "Journal"
+        setInitialCategory(initialCategory)
 
         if (color != -1) {
             _uiState.value = _uiState.value.copy(color = color)
@@ -52,11 +55,13 @@ class AddEditNoteViewModel @Inject constructor(
                         color = note.color,
                         category = note.category ?: "General",
                         createdAt = note.createdAt,
-                        updatedAt = note.updatedAt
+                        updatedAt = note.updatedAt,
+                        isPinned = note.isPinned
                     )
                 }
             }
         }
+
     }
 
     fun saveNote(
@@ -74,24 +79,18 @@ class AddEditNoteViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val note = Note(
-                    id = currentNoteId ?: 0,
-                    title = state.title,
-                    content = state.content,
-                    color = state.color,
-                    category = state.category,
-                    createdAt = if (isNewNote) now else state.createdAt ?: now,
-                    updatedAt = now
-                )
+                val createdAt = if (isNewNote) now else state.createdAt ?: now
+                val updatedAt = now
 
                 noteRepository.saveNoteWithEmbedding(
                     id = currentNoteId,
-                    title = note.title,
-                    content = note.content,
-                    category = note.category ?: "",
-                    color = note.color,
-                    createdAt = note.createdAt,
-                    updatedAt = now
+                    title = state.title,
+                    content = state.content,
+                    category = state.category,
+                    color = state.color,
+                    isPinned = state.isPinned,
+                    createdAt = createdAt,
+                    updatedAt = updatedAt
                 )
 
                 onSuccess()
@@ -110,6 +109,22 @@ class AddEditNoteViewModel @Inject constructor(
             )
         }
     }
+    fun togglePin() {
+        val current = _uiState.value
+        val newPinState = !current.isPinned
+        _uiState.value = current.copy(isPinned = newPinState)
+
+        currentNoteId?.let { id ->
+            viewModelScope.launch {
+                noteRepository.togglePinById(id, newPinState)
+            }
+        }
+    }
+
+    private fun setInitialCategory(category: String) {
+        _uiState.value = _uiState.value.copy(category = category)
+    }
+
 
     fun onContentChange(newContent: String) {
         _uiState.update { current ->
@@ -120,32 +135,48 @@ class AddEditNoteViewModel @Inject constructor(
         }
     }
 
-
     fun onCategoryChange(newCategory: String) {
         _uiState.value = _uiState.value.copy(category = newCategory)
     }
 
-    fun onColorChange(newColor: Int) {
-        _uiState.value = _uiState.value.copy(color = newColor)
-    }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
-    fun toggleMoreMenu() {
-        _uiState.value = _uiState.value.copy(isMoreMenuVisible = !_uiState.value.isMoreMenuVisible)
+
+    fun onMenuAction(action: NoteScreenMenu) {
+        when (action) {
+            NoteScreenMenu.Find -> {
+                enterFindMode()
+            }
+
+            NoteScreenMenu.Pin -> {
+                togglePin()
+            }
+
+            NoteScreenMenu.Move -> {
+                // TODO: open a bottom sheet or dialog for categories
+            }
+
+            NoteScreenMenu.Delete -> {
+                _uiState.update { it.copy(showDeleteDialog = true) }
+            }
+        }
+    }
+    fun enterFindMode() {
+        _uiState.update { it.copy(isFindMode = true) }
     }
 
-    fun toggleShareMenu() {
-        _uiState.value = _uiState.value.copy(isShareMenuVisible = !_uiState.value.isShareMenuVisible)
+    fun exitFindMode() {
+        _uiState.update { it.copy(isFindMode = false, findQuery = "") }
     }
 
-    fun dismissMenus() {
-        _uiState.value = _uiState.value.copy(
-            isMoreMenuVisible = false,
-            isShareMenuVisible = false
-        )
+    fun onFindQueryChanged(query: String) {
+        _uiState.update { it.copy(findQuery = query) }
     }
+
+
+
 }
 
 

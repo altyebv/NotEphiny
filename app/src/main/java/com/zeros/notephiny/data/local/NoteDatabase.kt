@@ -7,7 +7,7 @@ import com.zeros.notephiny.data.model.Note
 
 @Database(
     entities = [Note::class],
-    version = 3,
+    version = 4,
     exportSchema = false)
 
 @TypeConverters(Converters::class)

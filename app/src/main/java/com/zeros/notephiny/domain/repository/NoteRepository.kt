@@ -34,6 +34,17 @@ class NoteRepository @Inject constructor(
         return dao.getNotesCount()
     }
 
+    suspend fun togglePinById(noteId: Int, pinned: Boolean) {
+        dao.updatePin(noteId, pinned)
+    }
+
+    suspend fun togglePin(note: Note) {
+        val updated = note.copy(isPinned = !note.isPinned)
+        dao.insertNote(updated) // OnConflict.REPLACE makes this work
+    }
+
+
+
     suspend fun saveNoteWithEmbedding(
         id: Int? = null,
         title: String,
@@ -41,6 +52,7 @@ class NoteRepository @Inject constructor(
         category: String,
         color: Int,
         createdAt: Long? = null,
+        isPinned: Boolean = false,
         updatedAt: Long = System.currentTimeMillis()
     ) {
         val text = "$title $content $category"
@@ -53,10 +65,9 @@ class NoteRepository @Inject constructor(
             embedding = embedding,
             color = color,
             createdAt = createdAt ?: System.currentTimeMillis(),
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            isPinned = isPinned,
         )
         dao.insertNote(note)
     }
-
-
 }

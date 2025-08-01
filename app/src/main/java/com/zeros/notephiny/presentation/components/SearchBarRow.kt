@@ -42,7 +42,8 @@ import androidx.compose.ui.unit.sp
 fun SearchBarRow(
     query: String,
     onQueryChange: (String) -> Unit,
-    onCancelClick: () -> Unit
+    onCancelClick: () -> Unit,
+    placeholderText: String = "Search notes..."
 ) {
     val isDark = isSystemInDarkTheme()
     val focusRequester = remember { FocusRequester() }

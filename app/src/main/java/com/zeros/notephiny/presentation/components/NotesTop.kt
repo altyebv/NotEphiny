@@ -30,6 +30,7 @@ import com.zeros.notephiny.presentation.notes.NoteListViewModel.NoteListMode
 import com.zeros.notephiny.presentation.notes.NoteListViewModel.SortOrder
 @Composable
 fun NotesTop(
+    modifier: Modifier = Modifier,
     noteCount: Int,
     mode: NoteListMode,
     searchQuery: String,
@@ -45,7 +46,7 @@ fun NotesTop(
     selectedNoteIds: Set<Int> = emptySet(),
     onCancelMultiSelect: () -> Unit = {},
     onSelectAll: () -> Unit = {},
-    modifier: Modifier = Modifier,
+
 
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -71,7 +72,8 @@ fun NotesTop(
                             SearchBarRow(
                                 query = searchQuery,
                                 onQueryChange = onSearchQueryChange,
-                                onCancelClick = onCancelSearch
+                                onCancelClick = onCancelSearch,
+                                placeholderText = "Search notes..."
                             )
                         } else {
                             TopIconsRow(

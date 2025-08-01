@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface NoteDao {
 
-    @Query("SELECT * FROM notes ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
     @Query("SELECT DISTINCT category FROM notes")
     suspend fun getAllCategories(): List<String>
 
+    @Query("UPDATE notes SET isPinned = :pinned WHERE id = :noteId")
+    suspend fun updatePin(noteId: Int, pinned: Boolean)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note)
