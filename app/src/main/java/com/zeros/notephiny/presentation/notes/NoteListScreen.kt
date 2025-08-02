@@ -18,6 +18,7 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
+import com.zeros.notephiny.presentation.components.DeleteNoteDialog
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -82,27 +83,20 @@ fun NoteListScreen(
     )
 
     noteToDelete?.let { note ->
-        AlertDialog(
-            onDismissRequest = { noteToDelete = null },
-            title = { Text("Delete Note") },
-            text = { Text("Are you sure you want to delete this note?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteNote(note)
-                    lastDeletedNote = note
-                    noteToDelete = null
-                    showUndoSnackbar = true
-                }) {
-                    Text("Delete")
-                }
+        DeleteNoteDialog(
+            noteTitle = note.title,
+            onDelete = {
+                viewModel.deleteNote(note)
+                lastDeletedNote = note
+                noteToDelete = null
+                showUndoSnackbar = true
             },
-            dismissButton = {
-                TextButton(onClick = { noteToDelete = null }) {
-                    Text("Cancel")
-                }
+            onDismiss = {
+                noteToDelete = null
             }
         )
     }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {

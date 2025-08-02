@@ -7,7 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zeros.notephiny.ai.embedder.OnnxEmbedder
+import com.zeros.notephiny.core.util.CategoryProvider
 import com.zeros.notephiny.core.util.PreferencesManager
+import com.zeros.notephiny.data.model.CategoryGroup
+import com.zeros.notephiny.data.model.CategoryItem
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.domain.repository.NoteRepository
 import com.zeros.notephiny.presentation.components.menus.MainScreenMenu
@@ -20,7 +23,8 @@ import javax.inject.Inject
 class NoteListViewModel @Inject constructor(
     private val repository: NoteRepository,
     private val embedder: OnnxEmbedder,
-    private val preferencesManager: PreferencesManager
+    private val preferencesManager: PreferencesManager,
+    private val categoryProvider: CategoryProvider
 ) : ViewModel() {
 
     var recentlyDeletedNote: Note? = null
@@ -37,6 +41,10 @@ class NoteListViewModel @Inject constructor(
     private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
+    private val _categoryItems = MutableStateFlow<List<CategoryItem>>(emptyList())
+    val categoryItems: StateFlow<List<CategoryItem>> = _categoryItems.asStateFlow()
+
+
     sealed class NavigationEvent {
         object GoToSettings : NavigationEvent()
     }
@@ -49,6 +57,13 @@ class NoteListViewModel @Inject constructor(
     enum class NoteListMode {
         NORMAL,
         MULTI_SELECT
+    }
+
+    private fun fetchCategoryItems() {
+        viewModelScope.launch {
+            val structured = categoryProvider.getStructuredCategories()
+            _categoryItems.value = structured
+        }
     }
 
     val filteredNotes = combine(
@@ -84,6 +99,16 @@ class NoteListViewModel @Inject constructor(
     init {
         observeNotes()
         fetchAvailableCategories()
+        fetchCategoryItems()
+    }
+
+    private fun fetchAvailableCategories() {
+        viewModelScope.launch {
+            val dbCategories = repository.getAllCategories()
+            val defaultCategories = repository.getDefaultCategories()
+            val merged = (dbCategories + defaultCategories).toSet().toList().sorted()
+            _availableCategories.value = listOf("All") + merged.filter { it != "All" }
+        }
     }
 
     private fun observeNotes() {
@@ -108,6 +133,17 @@ class NoteListViewModel @Inject constructor(
         }
     }
 
+//    fun buildGroupedCategories(all: List<CategoryItem>): List<CategoryGroup> {
+//        val default = all.filter { it.isDefault }
+//        val user = all.filter { !it.isDefault }
+//
+//        return listOfNotNull(
+//            if (user.isNotEmpty()) CategoryGroup("My notebooks", user) else null,
+//            if (default.isNotEmpty()) CategoryGroup("Default notebook", default) else null
+//        )
+//    }
+
+
 
 
     fun onMainMenuAction(action: MainScreenMenu) {
@@ -131,18 +167,6 @@ class NoteListViewModel @Inject constructor(
     }
 
 
-
-
-
-
-    private fun fetchAvailableCategories() {
-        viewModelScope.launch {
-            val dbCategories = repository.getAllCategories()
-            val defaultCategories = repository.getDefaultCategories()
-            val merged = (dbCategories + defaultCategories).toSet().toList().sorted()
-            _availableCategories.value = listOf("All") + merged
-        }
-    }
 
     fun deleteNote(note: Note) {
         Log.d("NoteDelete", "Attempting to delete note with ID: ${note.id}")

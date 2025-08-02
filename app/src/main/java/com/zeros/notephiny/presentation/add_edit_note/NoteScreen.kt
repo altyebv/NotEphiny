@@ -49,16 +49,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.zIndex
 import com.zeros.notephiny.data.model.Note
+import com.zeros.notephiny.presentation.components.CategorySelectorUI
+import com.zeros.notephiny.presentation.components.DeleteNoteDialog
 import com.zeros.notephiny.presentation.components.HighlightedText
 import com.zeros.notephiny.presentation.components.SearchBarRow
 import com.zeros.notephiny.presentation.components.menus.GenericDropdownMenu
 import com.zeros.notephiny.presentation.components.menus.MenuAction
 import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
 import com.zeros.notephiny.presentation.components.menus.label
+import com.zeros.notephiny.presentation.notes.NoteListViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteScreen(
     viewModel: AddEditNoteViewModel = hiltViewModel(),
+    listViewModel: NoteListViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
     onNoteSaved: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -70,7 +75,13 @@ fun NoteScreen(
     val formattedDate = formatDateTime(timestamp)
     val category = uiState.category
     val keyboardController = LocalSoftwareKeyboardController.current
+    val noteToDelete = viewModel.getOriginalNote()
 
+
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchNotebookGroups()
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
@@ -138,6 +149,36 @@ fun NoteScreen(
                 )
             }
         }
+        if (uiState.showDeleteDialog && noteToDelete != null) {
+            DeleteNoteDialog(
+                noteTitle = noteToDelete.title,
+                onDelete = {
+                    listViewModel.deleteNote(noteToDelete)
+                    viewModel.onDeleteDialogDismissed()
+                    onBack()
+                },
+                onDismiss = {
+                    viewModel.onDeleteDialogDismissed()
+                }
+            )
+        }
+        if (uiState.showMoveNotebookSheet) {
+            CategorySelectorUI(
+                userNotebooks = viewModel.userNotebooks.value,
+                specialNotebooks = viewModel.appNotebooks.value,
+                onNotebookClick = { selected ->
+                    viewModel.moveNoteToCategory(selected.name) {
+                        // Optional: close the sheet or navigate up
+//                        navController.popBackStack()
+                    }
+                }
+                ,
+                onCreateNew = {
+                    // Handle creation if needed
+                }
+            )
+        }
+
 
 
     }
@@ -160,6 +201,8 @@ fun NoteTopSection(
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     var isShareSheetVisible by remember { mutableStateOf(false) }
+    var showCategorySelector by remember { mutableStateOf(false) }
+
 
     Column(
         modifier = Modifier
@@ -252,7 +295,9 @@ fun NoteTopSection(
             )
         }
     }
+
 }
+
 
 
 @Composable

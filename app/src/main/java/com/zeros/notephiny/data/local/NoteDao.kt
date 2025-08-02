@@ -1,6 +1,7 @@
 package com.zeros.notephiny.data.local
 
 import androidx.room.*
+import com.zeros.notephiny.data.model.CategoryCount
 import com.zeros.notephiny.data.model.Note
 import kotlinx.coroutines.flow.Flow
 
@@ -18,6 +19,10 @@ interface NoteDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note)
+
+    @Query("SELECT category, COUNT(*) as count FROM notes GROUP BY category")
+    suspend fun getNoteCountsByCategory(): List<CategoryCount>
+
 
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun deleteNoteById(noteId: Int)

@@ -62,7 +62,7 @@ fun AddEditScreen(
         AddEditNoteCategorySelector(
             selectedCategory = uiState.category,
             availableCategories = uiState.availableCategories,
-            onCategorySelected = viewModel::onCategoryChange
+            onCategorySelected = viewModel::moveNoteToCategory
         )
 
         Spacer(modifier = Modifier.height(16.dp))

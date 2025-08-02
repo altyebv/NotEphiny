@@ -13,6 +13,7 @@ data class AddEditNoteUiState(
     val category: String = DefaultNoteCategory,
     val createdAt: Long? = null,
     val updatedAt: Long? = null,
+    val showMoveNotebookSheet: Boolean = false,
     val availableCategories: List<String> = emptyList(),
     val errorMessage: String? = null,
     val showDeleteDialog: Boolean = false,

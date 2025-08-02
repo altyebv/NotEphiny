@@ -260,38 +260,3 @@ private fun TitleWithCountRow(
 
 
 
-
-//@Composable
-//private fun MultiSelectTitleRow(selectedCount: Int) {
-//    Row(
-//        verticalAlignment = Alignment.CenterVertically,
-//        modifier = Modifier.padding(top = 4.dp)
-//    ) {
-//        Text(
-//            text = if (selectedCount == 0) "Select items" else "$selectedCount selected",
-//            style = MaterialTheme.typography.headlineLarge
-//        )
-//    }
-//}
-
-//@Composable
-//private fun TitleRow(noteCount: Int) {
-//    Row(
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Text(
-//            text = "Notes",
-//            style = MaterialTheme.typography.headlineLarge
-//        )
-//        Spacer(modifier = Modifier.width(8.dp))
-//        Text(
-//            text = "($noteCount)",
-//            style = MaterialTheme.typography.titleMedium,
-//            color = MaterialTheme.colorScheme.onSurfaceVariant
-//        )
-//    }
-//}
-
-
-
-

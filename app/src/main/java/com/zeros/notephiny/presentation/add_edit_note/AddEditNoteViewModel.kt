@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zeros.notephiny.core.util.CategoryProvider
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.zeros.notephiny.core.util.formatDateTime
+import com.zeros.notephiny.data.model.CategoryType
+import com.zeros.notephiny.presentation.components.NotebookItem
 import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
 import kotlinx.coroutines.flow.update
 
@@ -33,6 +36,33 @@ class AddEditNoteViewModel @Inject constructor(
 
     private var currentNoteId: Int? = null
     val now = System.currentTimeMillis()
+    private var originalNote: Note? = null
+
+    private val categoryProvider = CategoryProvider(noteRepository)
+
+    val userNotebooks = mutableStateOf<List<NotebookItem>>(emptyList())
+    val appNotebooks = mutableStateOf<List<NotebookItem>>(emptyList())
+
+    fun fetchNotebookGroups() {
+        viewModelScope.launch {
+            val structured = categoryProvider.getStructuredCategories()
+            val user = structured.filter { it.type == CategoryType.USER }
+            val app = structured.filter { it.type == CategoryType.APP }
+
+            userNotebooks.value = user.map {
+                NotebookItem(name = it.name, count = it.count, type = it.type)
+            }
+
+            appNotebooks.value = app.map {
+                NotebookItem(name = it.name, count = it.count, type = it.type)
+            }
+        }
+    }
+
+    fun toggleMoveSheet(show: Boolean) {
+        _uiState.update { it.copy(showMoveNotebookSheet = show) }
+    }
+
 
 
     init {
@@ -49,6 +79,7 @@ class AddEditNoteViewModel @Inject constructor(
             viewModelScope.launch {
                 noteRepository.getNoteById(noteId)?.let { note ->
                     currentNoteId = note.id
+                    originalNote = note
                     _uiState.value = _uiState.value.copy(
                         title = note.title,
                         content = note.content,
@@ -63,6 +94,8 @@ class AddEditNoteViewModel @Inject constructor(
         }
 
     }
+
+    fun getOriginalNote(): Note? = originalNote
 
     fun saveNote(
         onSuccess: () -> Unit,
@@ -135,8 +168,30 @@ class AddEditNoteViewModel @Inject constructor(
         }
     }
 
-    fun onCategoryChange(newCategory: String) {
-        _uiState.value = _uiState.value.copy(category = newCategory)
+//    fun onCategoryChange(newCategory: String) {
+//        _uiState.update {
+//            it.copy(
+//                category = newCategory,
+//                showMoveNotebookSheet = false // Close the sheet
+//            )
+//        }
+//    }
+    fun moveNoteToCategory(
+        newCategory: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        _uiState.update {
+            it.copy(
+                category = newCategory,
+                showMoveNotebookSheet = false
+            )
+        }
+
+        saveNote(
+            onSuccess = onSuccess,
+            onError = onError
+        )
     }
 
 
@@ -155,7 +210,7 @@ class AddEditNoteViewModel @Inject constructor(
             }
 
             NoteScreenMenu.Move -> {
-                // TODO: open a bottom sheet or dialog for categories
+                _uiState.update { it.copy(showMoveNotebookSheet = true) }
             }
 
             NoteScreenMenu.Delete -> {
@@ -163,6 +218,11 @@ class AddEditNoteViewModel @Inject constructor(
             }
         }
     }
+    fun onDeleteDialogDismissed() {
+        _uiState.update { it.copy(showDeleteDialog = false) }
+    }
+
+
     fun enterFindMode() {
         _uiState.update { it.copy(isFindMode = true) }
     }
@@ -174,9 +234,6 @@ class AddEditNoteViewModel @Inject constructor(
     fun onFindQueryChanged(query: String) {
         _uiState.update { it.copy(findQuery = query) }
     }
-
-
-
 }
 
 

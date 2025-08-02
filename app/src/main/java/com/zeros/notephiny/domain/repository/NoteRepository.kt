@@ -3,6 +3,7 @@ package com.zeros.notephiny.domain.repository
 import com.zeros.notephiny.data.local.NoteDao
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.ai.embedder.OnnxEmbedder
+import com.zeros.notephiny.data.model.CategoryCount
 
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -14,6 +15,8 @@ class NoteRepository @Inject constructor(
 
     fun getDefaultCategories(): List<String> = DefaultCategories
 
+    fun getAppCategories(): List<String> = AppCategories
+
     fun getAllNotes(): Flow<List<Note>> = dao.getAllNotes()
 
     suspend fun insertNote(note: Note) = dao.insertNote(note)
@@ -23,6 +26,9 @@ class NoteRepository @Inject constructor(
         return if (fromDb.isEmpty()) DefaultCategories else (fromDb + DefaultCategories).distinct()
     }
 
+    suspend fun getNoteCountsByCategory(): List<CategoryCount> {
+        return dao.getNoteCountsByCategory()
+    }
 
     suspend fun deleteNoteById(noteId: Int) = dao.deleteNoteById(noteId)
 
@@ -42,7 +48,6 @@ class NoteRepository @Inject constructor(
         val updated = note.copy(isPinned = !note.isPinned)
         dao.insertNote(updated) // OnConflict.REPLACE makes this work
     }
-
 
 
     suspend fun saveNoteWithEmbedding(
