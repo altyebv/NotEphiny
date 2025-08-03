@@ -19,6 +19,8 @@ fun DeleteNoteDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {

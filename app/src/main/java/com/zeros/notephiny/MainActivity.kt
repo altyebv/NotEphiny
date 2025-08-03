@@ -4,7 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,8 +21,11 @@ import androidx.compose.ui.Modifier
 import com.zeros.notephiny.presentation.notes.NoteListViewModel
 import com.zeros.notephiny.ui.theme.NotephinyTheme
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.zeros.notephiny.core.util.Screen
 import com.zeros.notephiny.data.model.Note
+import com.zeros.notephiny.presentation.navigation.BottomNavBar
 import com.zeros.notephiny.presentation.navigation.NavGraph
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -43,14 +51,42 @@ fun NotephinyApp(
     viewModel: NoteListViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val notes by viewModel.filteredNotes.collectAsState()
-    val selectedCategory = viewModel.selectedCategory.collectAsState().value
-    var noteToDelete by remember { mutableStateOf<Note?>(null) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    val showBottomBar = currentRoute in listOf(
+        Screen.NoteList.route,
+        Screen.TodoList.route // Add this route to your Screen object
+    )
+    var fabClick by remember { mutableStateOf<(() -> Unit)?>(null) }
 
 
-    NavGraph(navController = navController)
-
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        bottomBar = {
+            if (showBottomBar) {
+                BottomNavBar(navController = navController)
+            }
+        },
+        floatingActionButton = {
+            fabClick?.let { onClick ->
+                FloatingActionButton(
+                    onClick = onClick,
+                    modifier = Modifier.navigationBarsPadding()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavGraph(
+            navController = navController,
+            modifier = Modifier.padding(innerPadding),
+            setFabClick = { fabClick = it }
+        )
+    }
 }
+
 
 
 

@@ -26,7 +26,6 @@ fun NoteListLayout(
     noteToDelete: Note?,
     onDeleteRequest: (Note) -> Unit,
     onNoteClick: (Note) -> Unit,
-    onFabClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
     searchQuery: String,
     isSearching: Boolean,
@@ -48,11 +47,6 @@ fun NoteListLayout(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onFabClick) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
-            }
-        }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
             NotesTop(

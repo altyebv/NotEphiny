@@ -7,6 +7,7 @@ import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.core.util.PreferencesManager
 import com.zeros.notephiny.data.local.NoteDao
 import com.zeros.notephiny.data.local.NoteDatabase
+import com.zeros.notephiny.data.local.TodoDao
 import com.zeros.notephiny.domain.repository.NoteRepository
 import dagger.Module
 import dagger.Provides
@@ -36,7 +37,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTodoDao(db: NoteDatabase): TodoDao = db.todoDao() // ✅ Added this
+
+    @Provides
+    @Singleton
     fun providePreferencesManager(@ApplicationContext context: Context): PreferencesManager {
         return PreferencesManager(context)
     }
 }
+

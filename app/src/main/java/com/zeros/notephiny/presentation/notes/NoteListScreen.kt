@@ -1,5 +1,6 @@
 package com.zeros.notephiny.presentation.notes
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zeros.notephiny.presentation.components.DeleteNoteDialog
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -28,7 +30,8 @@ import java.nio.charset.StandardCharsets
 @Composable
 fun NoteListScreen(
     navController: NavController,
-    viewModel: NoteListViewModel = hiltViewModel()
+    viewModel: NoteListViewModel = hiltViewModel(),
+    setFabClick: ((() -> Unit)?) -> Unit
 ) {
     val notes by viewModel.filteredNotes.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -58,13 +61,13 @@ fun NoteListScreen(
                 )
             }
         },
-        onFabClick = {
-            navController.navigate(
-                Screen.AddEditNote.route +
-                        "?noteId=-1&noteColor=-1&category=${URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
-                        }"
-            )
-        },
+//        onFabClick = {
+//            navController.navigate(
+//                Screen.AddEditNote.route +
+//                        "?noteId=-1&noteColor=-1&category=${URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
+//                        }"
+//            )
+//        },
         snackbarHostState = snackbarHostState,
         searchQuery = searchQuery,
         isSearching = isSearching,
@@ -81,6 +84,20 @@ fun NoteListScreen(
         onCancelMultiSelect = viewModel::exitMultiSelectMode,
         onSelectAll = { viewModel.selectAll() }
     )
+    LaunchedEffect(Unit) {
+        Log.d("NoteListScreen", "LaunchedEffect triggered")
+        setFabClick {
+            navController.navigate(
+                Screen.AddEditNote.route +
+                        "?noteId=-1&noteColor=-1&category=${
+                            URLEncoder.encode(
+                                selectedCategory,
+                                StandardCharsets.UTF_8.toString()
+                            )
+                        }"
+            )
+        }
+    }
 
     noteToDelete?.let { note ->
         DeleteNoteDialog(
@@ -98,17 +115,20 @@ fun NoteListScreen(
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    LaunchedEffect(Unit) {
-        viewModel.navigationEvent
-            .flowWithLifecycle(lifecycleOwner.lifecycle, Lifecycle.State.STARTED)
-            .collect { event ->
-                when (event) {
-                    is NoteListViewModel.NavigationEvent.GoToSettings -> {
-                        navController.navigate(Screen.Settings.route)
-                    }
-                }
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == Screen.NoteList.route) {
+            setFabClick {
+                navController.navigate(
+                    Screen.AddEditNote.route +
+                            "?noteId=-1&noteColor=-1&category=" +
+                            URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
+                )
             }
+        } else {
+            setFabClick(null)
+        }
     }
 
 
