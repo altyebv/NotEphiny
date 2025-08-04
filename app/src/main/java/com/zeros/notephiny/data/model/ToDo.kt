@@ -12,5 +12,6 @@ data class Todo(
     val isDone: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val dueDate: Long? = null, // optional
-    val noteId: Int? = null // for later semantic linking
+    val noteId: Int? = null, // for later semantic linking
+    val embedding: List<Float> = emptyList(),
 )
