@@ -23,6 +23,10 @@ interface NoteDao {
     @Query("SELECT category, COUNT(*) as count FROM notes GROUP BY category")
     suspend fun getNoteCountsByCategory(): List<CategoryCount>
 
+    @Query("SELECT * FROM notes")
+    suspend fun getAllNotesOnce(): List<Note>
+
+
 
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun deleteNoteById(noteId: Int)
