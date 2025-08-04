@@ -22,7 +22,6 @@ import javax.inject.Inject
 @HiltViewModel
 class NoteListViewModel @Inject constructor(
     private val repository: NoteRepository,
-    private val embedder: OnnxEmbedder,
     private val preferencesManager: PreferencesManager,
     private val categoryProvider: CategoryProvider
 ) : ViewModel() {
@@ -133,19 +132,6 @@ class NoteListViewModel @Inject constructor(
         }
     }
 
-//    fun buildGroupedCategories(all: List<CategoryItem>): List<CategoryGroup> {
-//        val default = all.filter { it.isDefault }
-//        val user = all.filter { !it.isDefault }
-//
-//        return listOfNotNull(
-//            if (user.isNotEmpty()) CategoryGroup("My notebooks", user) else null,
-//            if (default.isNotEmpty()) CategoryGroup("Default notebook", default) else null
-//        )
-//    }
-
-
-
-
     fun onMainMenuAction(action: MainScreenMenu) {
         when (action) {
 
@@ -165,6 +151,8 @@ class NoteListViewModel @Inject constructor(
             }
         }
     }
+
+
 
 
 
@@ -219,8 +207,6 @@ class NoteListViewModel @Inject constructor(
         _uiState.update { it.copy(selectedNoteIds = allNoteIds) }
 
         val notes = _uiState.value.notes
-        Log.d("NoteDebug", "Notes count: ${notes.size}")
-        Log.d("NoteDebug", "All note IDs: $allNoteIds")
     }
 
 
@@ -241,6 +227,15 @@ class NoteListViewModel @Inject constructor(
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }
+
+//    fun searchNotesBySemantic(query: String) {
+//        viewModelScope.launch {
+//            _uiState.update { it.copy(isLoading = true) }
+//            val results = repository.searchNotesBySemantic(query)
+//            _uiState.update { it.copy(notes = results, isLoading = false) }
+//        }
+//    }
+
 
 }
 

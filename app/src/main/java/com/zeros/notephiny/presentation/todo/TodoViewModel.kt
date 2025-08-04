@@ -51,10 +51,21 @@ class TodoViewModel @Inject constructor(
 
     fun addTodo(title: String) {
         viewModelScope.launch {
-            repository.addTodo(Todo(title = title.trim()))
+            repository.saveTodoWithEmbedding(title = title.trim())
             onDismissAddTodo()
+            Log.d("TodoVM", "Request to save todo with title: $title")
+
         }
     }
+
+    fun searchTodos(query: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val results = repository.searchTodosBySemantic(query)
+            _uiState.update { it.copy(todos = results, isLoading = false) }
+        }
+    }
+
 
     fun deleteTodo(todo: Todo) {
         viewModelScope.launch {
@@ -123,10 +134,6 @@ class TodoViewModel @Inject constructor(
         val allTodosIds = _uiState.value.todos.mapNotNull { it.id }.toSet()
         _uiState.update { it.copy(selectedTodoIds = allTodosIds) }
 
-        val todos = _uiState.value.todos
-        Log.d("NoteDebug", "Notes count: ${todos.size}")
-        Log.d("NoteDebug", "All note IDs: $allTodosIds")
     }
-
 
 }

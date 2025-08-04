@@ -1,5 +1,6 @@
 package com.zeros.notephiny.presentation.add_edit_note
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -9,6 +10,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.core.util.CategoryProvider
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.domain.repository.NoteRepository
@@ -27,7 +29,7 @@ import kotlinx.coroutines.flow.update
 @HiltViewModel
 class AddEditNoteViewModel @Inject constructor(
     private val noteRepository: NoteRepository,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditNoteUiState())
@@ -127,6 +129,8 @@ class AddEditNoteViewModel @Inject constructor(
                 )
 
                 onSuccess()
+                Log.d("AddEditViewModel", "Saving note with title: ${state.title}")
+
             } catch (e: Exception) {
                 val message = "Failed to save note: ${e.message}"
                 _uiState.value = state.copy(errorMessage = message)
@@ -168,14 +172,7 @@ class AddEditNoteViewModel @Inject constructor(
         }
     }
 
-//    fun onCategoryChange(newCategory: String) {
-//        _uiState.update {
-//            it.copy(
-//                category = newCategory,
-//                showMoveNotebookSheet = false // Close the sheet
-//            )
-//        }
-//    }
+
     fun moveNoteToCategory(
         newCategory: String,
         onSuccess: () -> Unit = {},
