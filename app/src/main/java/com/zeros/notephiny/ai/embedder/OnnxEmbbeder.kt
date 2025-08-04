@@ -6,53 +6,97 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import ai.onnxruntime.OnnxTensor
 import android.util.Log
-import com.zeros.notephiny.ai.tokenizer.BertTokenizer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.LongBuffer
 import javax.inject.Inject
+import kotlin.math.sqrt
 
-class OnnxEmbedder @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    private val ortEnvironment: OrtEnvironment = OrtEnvironment.getEnvironment()
-    private val session: OrtSession
-    private val tokenizer = BertTokenizer(context)
+import com.zeros.notephiny.ai.tokenizer.BertTokenizer
 
-    init {
-        val modelInputStream = context.assets.open("minilm.onnx")
-        val tempModelFile = File.createTempFile("minilm", ".onnx", context.cacheDir)
-        modelInputStream.use { input ->
-            FileOutputStream(tempModelFile).use { output ->
+
+object OnnxEmbedder {
+    private var ortEnvironment: OrtEnvironment? = null
+    private var session: OrtSession? = null
+    private var modelFile: File? = null
+
+
+    fun initialize(context: Context) {
+        if (ortEnvironment != null && session != null) return // already initialized
+
+        ortEnvironment = OrtEnvironment.getEnvironment()
+
+        val inputStream = context.assets.open("minilm.onnx")
+        modelFile = File(context.cacheDir, "minilm.onnx")
+        inputStream.use { input ->
+            FileOutputStream(modelFile!!).use { output ->
                 input.copyTo(output)
             }
         }
-        session = ortEnvironment.createSession(tempModelFile.absolutePath)
+
+        session = ortEnvironment!!.createSession(modelFile!!.absolutePath)
     }
 
-    fun embed(text: String): FloatArray {
-        val tokens = tokenizer.tokenize(text)
+    fun embed(text: String, context: Context): FloatArray {
+        val env = ortEnvironment ?: throw IllegalStateException("OnnxEmbedder not initialized")
+        val sess = session ?: throw IllegalStateException("OnnxEmbedder not initialized")
 
-        val inputIds = tokens.map { it.toLong() }.toLongArray()
-        val attentionMask = LongArray(inputIds.size) { 1L }
-        val tokenTypeIds = LongArray(inputIds.size) { 0L }
+        val tokenizer = BertTokenizer(context)
 
-        val shape = longArrayOf(1, inputIds.size.toLong())
+        // Get tokenized input (already padded to maxLen)
+        val inputIds: IntArray = tokenizer.tokenize(text)
+        val attentionMask: IntArray = tokenizer.attentionMask(inputIds)
+        val tokenTypeIds: IntArray = IntArray(inputIds.size) { 0 } // all zeros for single sentence
 
-        val inputIdsTensor = OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(inputIds), shape)
-        val attentionMaskTensor = OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(attentionMask), shape)
-        val tokenTypeIdsTensor = OnnxTensor.createTensor(ortEnvironment, LongBuffer.wrap(tokenTypeIds), shape)
+        // Convert to LongArray for ONNX
+        val inputIdsLong = inputIds.map { it.toLong() }.toLongArray()
+        val attentionMaskLong = attentionMask.map { it.toLong() }.toLongArray()
+        val tokenTypeIdsLong = tokenTypeIds.map { it.toLong() }.toLongArray()
+        val shape = longArrayOf(1, inputIdsLong.size.toLong()) // [1, maxLen]
 
-        val inputMap = mapOf(
-            "input_ids" to inputIdsTensor,
-            "attention_mask" to attentionMaskTensor,
-            "token_type_ids" to tokenTypeIdsTensor
-        )
+        // Prepare tensors and run inference
+        OnnxTensor.createTensor(env, LongBuffer.wrap(inputIdsLong), shape).use { inputIdsTensor ->
+            OnnxTensor.createTensor(env, LongBuffer.wrap(attentionMaskLong), shape).use { attentionMaskTensor ->
+                OnnxTensor.createTensor(env, LongBuffer.wrap(tokenTypeIdsLong), shape).use { tokenTypeIdsTensor ->
 
-        val results = session.run(inputMap)
-        val output = results[0].value as Array<Array<FloatArray>>
-        return output[0][0] // CLS token
+                    val inputMap = mapOf(
+                        "input_ids" to inputIdsTensor,
+                        "attention_mask" to attentionMaskTensor,
+                        "token_type_ids" to tokenTypeIdsTensor
+                    )
+
+                    sess.run(inputMap).use { results ->
+                        val output = results[0].value as Array<Array<FloatArray>>
+                        val embedding = output[0][0] // Use [CLS] token's embedding
+
+                        return embedding
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    fun cosineSimilarity(a: List<Float>, b: List<Float>): Double {
+        if (a.size != b.size) return 0.0
+
+        val dotProduct = a.zip(b).sumOf { (x, y) -> x.toDouble() * y.toDouble() }
+        val normA = sqrt(a.sumOf { it.toDouble() * it.toDouble() })
+        val normB = sqrt(b.sumOf { it.toDouble() * it.toDouble() })
+
+        return if (normA == 0.0 || normB == 0.0) 0.0 else dotProduct / (normA * normB)
+    }
+
+    fun close() {
+        session?.close()
+        ortEnvironment?.close()
+        modelFile?.delete()
+
+        session = null
+        ortEnvironment = null
+        modelFile = null
     }
 }
 
