@@ -1,16 +1,19 @@
 package com.zeros.notephiny.domain.repository
 
+import android.content.Context
+import android.util.Log
 import com.zeros.notephiny.data.local.NoteDao
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.data.model.CategoryCount
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class NoteRepository @Inject constructor(
     private val dao: NoteDao,
-    private val embedder: OnnxEmbedder
+    @ApplicationContext private val context: Context
 ) {
 
     fun getDefaultCategories(): List<String> = DefaultCategories
@@ -20,6 +23,8 @@ class NoteRepository @Inject constructor(
     fun getAllNotes(): Flow<List<Note>> = dao.getAllNotes()
 
     suspend fun insertNote(note: Note) = dao.insertNote(note)
+
+    suspend fun getAllNotesOnce(): List<Note> = dao.getAllNotesOnce()
 
     suspend fun getAllOrDefaultCategories(): List<String> {
         val fromDb = dao.getAllCategories()
@@ -39,6 +44,12 @@ class NoteRepository @Inject constructor(
     suspend fun getNotesCount(): Int {
         return dao.getNotesCount()
     }
+
+
+
+
+
+
 
     suspend fun togglePinById(noteId: Int, pinned: Boolean) {
         dao.updatePin(noteId, pinned)
@@ -61,7 +72,9 @@ class NoteRepository @Inject constructor(
         updatedAt: Long = System.currentTimeMillis()
     ) {
         val text = "$title $content $category"
-        val embedding = embedder.embed(text).toList()
+        val embedding = OnnxEmbedder.embed(text, context).toList()
+        Log.d("NoteRepo", "Embedding vector length: ${embedding.size}")
+
         val note = Note(
             id = id,
             title = title,
