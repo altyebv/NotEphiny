@@ -61,13 +61,6 @@ fun NoteListScreen(
                 )
             }
         },
-//        onFabClick = {
-//            navController.navigate(
-//                Screen.AddEditNote.route +
-//                        "?noteId=-1&noteColor=-1&category=${URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
-//                        }"
-//            )
-//        },
         snackbarHostState = snackbarHostState,
         searchQuery = searchQuery,
         isSearching = isSearching,
