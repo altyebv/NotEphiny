@@ -22,7 +22,6 @@ local.properties
 .cxx/
 
 # OS junk
-.DS_Store
 Thumbs.db
 
 # Jetpack Compose specific
