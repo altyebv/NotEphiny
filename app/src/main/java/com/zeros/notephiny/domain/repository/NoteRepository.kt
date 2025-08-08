@@ -26,6 +26,48 @@ class NoteRepository @Inject constructor(
 
     suspend fun insertNote(note: Note) = dao.insertNote(note)
 
+    suspend fun searchNotes(
+        query: String,
+        topK: Int = 10,
+        similarityThreshold: Double = 0.75
+    ): List<Note> {
+        val trimmedQuery = query.trim()
+        if (trimmedQuery.length < 3) return emptyList()
+
+        // 1. Keyword search - strict filtering by keyword presence in title or content
+        val keywordResults = dao.searchNotesByKeyword(trimmedQuery)
+
+        // 2. Semantic search on all notes with embeddings
+        val allWithEmbeddings = dao.getNotesWithEmbeddings()
+
+        val queryEmbedding = OnnxEmbedder.embed(trimmedQuery, context).toList()
+
+        val semanticResults = allWithEmbeddings
+            .map { note -> note to OnnxEmbedder.cosineSimilarity(queryEmbedding, note.embedding!!) }
+            .filter { it.second >= similarityThreshold }
+            // Extra filter: only include semantic results if keyword actually appears in note text
+            .filter { (note, _) ->
+                note.title.contains(trimmedQuery, ignoreCase = true) ||
+                        note.content.contains(trimmedQuery, ignoreCase = true)
+            }
+            .sortedByDescending { it.second }
+            .take(topK)
+            .map { it.first }
+
+        // 3. Merge & deduplicate
+        return (keywordResults + semanticResults)
+            .distinctBy { it.id }
+            .sortedWith(
+                compareByDescending<Note> { it.isPinned }
+                    .thenByDescending { it.updatedAt }
+            )
+    }
+
+
+
+
+
+
 
     suspend fun getNoteCountsByCategory(): List<CategoryCount> {
         return dao.getNoteCountsByCategory()

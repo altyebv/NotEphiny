@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.zeros.notephiny.ai.embedder.OnnxEmbedder
 import com.zeros.notephiny.data.local.TodoDao
+import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.data.model.Todo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +12,8 @@ import javax.inject.Inject
 
 class TodoRepository @Inject constructor(
     private val dao: TodoDao,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val aiActionRepository: AiActionRepository
 
 ) {
 
@@ -36,6 +38,21 @@ class TodoRepository @Inject constructor(
             }
     }
 
+    suspend fun deriveTodosFromNote(note: Note) {
+        val actions = aiActionRepository.extractActionsFromText(note.content)
+
+        actions.forEach { action ->
+            saveTodoWithEmbedding(
+                title = action,
+                noteId = note.id,
+                isDerived = true
+            )
+        }
+
+        Log.d("TODO_REPO", "Derived and saved ${actions.size} todos from note ${note.id}")
+    }
+
+
 
     suspend fun saveTodoWithEmbedding(
         id: Int? = null,
@@ -43,17 +60,20 @@ class TodoRepository @Inject constructor(
         isDone: Boolean = false,
         createdAt: Long? = null,
         dueDate: Long? = null,
-        noteId: Int? = null
+        noteId: Int? = null,
+        isDerived: Boolean = false
     ) {
         val embedding = OnnxEmbedder.embed(title, context).toList()
         val todo = Todo(
-            id = id ?: 0,
+            id = id ,
             title = title,
             isDone = isDone,
             createdAt = createdAt ?: System.currentTimeMillis(),
             dueDate = dueDate,
             noteId = noteId,
-            embedding = embedding
+            embedding = embedding,
+            isDerived = isDerived
+
         )
         dao.insertTodo(todo)
         Log.d("TodoRepo", "Saved todo '$title' with embedding (len=${embedding.size})")
