@@ -1,9 +1,9 @@
 package com.zeros.notephiny.presentation.add_edit_note
 
-import android.util.Log
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -55,11 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import com.zeros.notephiny.data.model.Note
 import kotlinx.coroutines.delay
-
 @Composable
 fun RelatedNotesSection(
     relatedNotes: List<Note>,
-    onNoteClick: (Note) -> Unit // Pass a callback for navigation
+    onNoteClick: (Note) -> Unit
 ) {
     if (relatedNotes.isEmpty()) return
 
@@ -75,67 +76,80 @@ fun RelatedNotesSection(
         )
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
             items(relatedNotes) { note ->
-                Card(
-                    modifier = Modifier
-                        .width(260.dp)
-                        .height(160.dp)
-                        .clickable { onNoteClick(note) }, // Handle navigation
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    shape = RoundedCornerShape(16.dp),
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn() + slideInHorizontally(initialOffsetX = { it / 2 })
                 ) {
-                    Column(
+                    Card(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
+                            .width(280.dp)
+                            .height(180.dp)
+                            .clickable { onNoteClick(note) },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     ) {
-                        Text(
-                            text = note.title.ifBlank { "Untitled" },
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = note.content,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        val similarity = note.similarity?.coerceIn(0f, 1f) ?: 0f
-                        val similarityPercent = (similarity * 100).toInt()
-
                         Column(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
                         ) {
-                            LinearProgressIndicator(
-                                progress = similarity,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp),
-                                color = when {
-                                    similarity > 0.75f -> MaterialTheme.colorScheme.primary
-                                    similarity > 0.4f -> MaterialTheme.colorScheme.tertiary
-                                    else -> MaterialTheme.colorScheme.outline
-                                },
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            Text(
+                                text = note.title.ifBlank { "Untitled" },
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
-                                text = "Similarity: $similarityPercent%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier.align(Alignment.End)
+                                text = note.content,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                             )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            val similarity = note.similarity?.coerceIn(0f, 1f) ?: 0f
+                            val similarityPercent = (similarity * 100).toInt()
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = similarity,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(5.dp)
+                                        .clip(RoundedCornerShape(50)),
+                                    color = when {
+                                        similarity > 0.75f -> MaterialTheme.colorScheme.primary
+                                        similarity > 0.4f -> MaterialTheme.colorScheme.tertiary
+                                        else -> MaterialTheme.colorScheme.outline
+                                    },
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = "Similarity: $similarityPercent%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.align(Alignment.End)
+                                )
+                            }
                         }
                     }
                 }
@@ -144,7 +158,6 @@ fun RelatedNotesSection(
     }
 }
 
-
 @Composable
 fun HighlightedActionsText(
     text: String,
@@ -152,36 +165,41 @@ fun HighlightedActionsText(
     style: TextStyle,
     onActionClick: (String, Offset) -> Unit
 ) {
-    val scanCharCount = remember { mutableStateOf(0) }
+    val scanWordCount = remember { mutableStateOf(0) }
     var showRealHighlights by remember { mutableStateOf(false) }
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
-    // Animate the fake scan (character-based)
+    // Animate fake scan (word-based, variable speed)
     LaunchedEffect(text, actions) {
         showRealHighlights = false
-        scanCharCount.value = 0
-        for (i in 0..text.length) {
-            scanCharCount.value = i
-            delay(15) // Faster scan
+        scanWordCount.value = 0
+
+        val words = text.split(Regex("(?<=\\s)|(?=\\s)")) // keep spaces as tokens
+        for (i in words.indices) {
+            scanWordCount.value = i
+            delay((35..65).random().toLong()) // variable speed
         }
-        delay(300) // Let it linger
+
+        delay(250) // linger before reveal
         showRealHighlights = true
     }
 
-    val annotatedText = remember(text, actions, scanCharCount.value, showRealHighlights) {
+    val annotatedText = remember(text, actions, scanWordCount.value, showRealHighlights) {
         buildAnnotatedString {
             if (showRealHighlights) {
-                // ✅ Original matching logic
+                // Real highlights
                 var currentIndex = 0
                 val matches = mutableListOf<Pair<IntRange, String>>()
 
                 actions.distinct().forEach { action ->
                     val cleanedAction = action.trim()
-                    val regex = Regex(Regex.escape(cleanedAction), RegexOption.IGNORE_CASE)
-                    regex.findAll(text).forEach { match ->
-                        val range = match.range
-                        if (matches.none { it.first.overlaps(range) }) {
-                            matches.add(range to match.value)
+                    if (cleanedAction.isNotEmpty()) {
+                        val regex = Regex(Regex.escape(cleanedAction), RegexOption.IGNORE_CASE)
+                        regex.findAll(text).forEach { match ->
+                            val range = match.range
+                            if (matches.none { it.first.overlaps(range) }) {
+                                matches.add(range to match.value)
+                            }
                         }
                     }
                 }
@@ -190,14 +208,16 @@ fun HighlightedActionsText(
 
                 for ((range, matchedText) in matches) {
                     if (currentIndex < range.first) {
-                        append(text.substring(currentIndex, range.first))
+                        withStyle(SpanStyle(color = style.color)) {
+                            append(text.substring(currentIndex, range.first))
+                        }
                     }
 
                     pushStringAnnotation(tag = "ACTION", annotation = matchedText)
                     withStyle(
                         SpanStyle(
                             background = Color(0xFFFFF9C4),
-                            color = Color(0xFF222222),
+                            color = style.color, // keep style’s text color
                             fontWeight = FontWeight.Bold
                         )
                     ) {
@@ -209,23 +229,33 @@ fun HighlightedActionsText(
                 }
 
                 if (currentIndex < text.length) {
-                    append(text.substring(currentIndex))
+                    withStyle(SpanStyle(color = style.color)) {
+                        append(text.substring(currentIndex))
+                    }
                 }
             } else {
-                // 🔹 Fake highlighter (character-based)
-                for (i in text.indices) {
-                    val char = text[i].toString()
-                    if (i < scanCharCount.value) {
+                // Fake highlighter
+                val words = text.split(Regex("(?<=\\s)|(?=\\s)"))
+                val scanIndex = scanWordCount.value
+
+                for (i in words.indices) {
+                    val alpha = if (i <= scanIndex) {
+                        0.3f + 0.2f * kotlin.math.sin((i + 1) * 0.8f)
+                    } else 0f
+
+                    if (i <= scanIndex) {
                         withStyle(
                             SpanStyle(
-                                background = Color(0xFFFFF9C4).copy(alpha = 0.3f),
-                                color = Color.Black
+                                background = Color(0xFFFFF9C4).copy(alpha = alpha),
+                                color = style.color // inherit text color
                             )
                         ) {
-                            append(char)
+                            append(words[i])
                         }
                     } else {
-                        append(char)
+                        withStyle(SpanStyle(color = style.color)) {
+                            append(words[i])
+                        }
                     }
                 }
             }
@@ -258,6 +288,7 @@ fun HighlightedActionsText(
 private fun IntRange.overlaps(other: IntRange): Boolean {
     return this.first <= other.last && other.first <= this.last
 }
+
 
 @Composable
 fun ActionPopupMenu(

@@ -31,23 +31,41 @@ import com.zeros.notephiny.core.util.formatDateTime
 import com.zeros.notephiny.presentation.components.HighlightedText
 import com.zeros.notephiny.presentation.components.SearchBarRow
 import com.zeros.notephiny.presentation.components.menus.NoteScreenMenu
+import com.zeros.notephiny.presentation.icons.Pin
 import com.zeros.notephiny.presentation.icons.Stars
 import com.zeros.notephiny.testing_features.NoteDropdownMenu
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteAIScreen(
     viewModel: AddEditNoteViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
     onNoteSaved: () -> Unit = {},
+    setFabClick: ((() -> Unit)?) -> Unit,
     category: String,
     navController: NavHostController
-
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val timestamp = uiState.updatedAt ?: uiState.createdAt ?: System.currentTimeMillis()
     val formattedDate = formatDateTime(timestamp)
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sheet open/close handling
+    LaunchedEffect(uiState.showRelated) {
+        if (uiState.showRelated) {
+            sheetState.show()
+        } else {
+            sheetState.hide()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        setFabClick(null)
+    }
 
 
     Scaffold(
@@ -59,10 +77,13 @@ fun NoteAIScreen(
                     viewModel.toggleShowRelated()
                 },
                 onToggleHighlight = { viewModel.toggleHighlightMode() },
-                onDetectActions = { viewModel.detectActionsFromText() }
+                onDetectActions = { viewModel.detectActionsFromText() },
+                onTogglePin = {viewModel.togglePin(note = uiState.toNote())}
             )
         }
     ) { innerPadding ->
+
+        // Main content (always full screen)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,9 +100,7 @@ fun NoteAIScreen(
                             keyboardController?.hide()
                             onNoteSaved()
                         },
-                        onError = { message ->
-                            Log.e("NoteSave", message)
-                        }
+                        onError = { message -> Log.e("NoteSave", message) }
                     )
                 },
                 onMenuAction = viewModel::onMenuAction,
@@ -92,49 +111,57 @@ fun NoteAIScreen(
                 onCancelClick = viewModel::exitFindMode,
             )
 
-            Column(
+            NoteEditorSection(
+                title = uiState.title,
+                onTitleChange = viewModel::onTitleChange,
+                content = uiState.content,
+                onContentChange = viewModel::onContentChange,
                 modifier = Modifier
-                    .weight(1f)
                     .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                NoteEditorSection(
-                    title = uiState.title,
-                    onTitleChange = viewModel::onTitleChange,
-                    content = uiState.content,
-                    onContentChange = viewModel::onContentChange,
-                    modifier = Modifier,
-                    isFindMode = uiState.isFindMode,
-                    findQuery = uiState.findQuery,
-                    extractedActions = uiState.extractedActions,
-                    highlightActions = uiState.highlightActions,
-                    viewModel = viewModel
-                )
+                    .weight(1f),
+                isFindMode = uiState.isFindMode,
+                findQuery = uiState.findQuery,
+                extractedActions = uiState.extractedActions,
+                highlightActions = uiState.highlightActions,
+                viewModel = viewModel
+            )
+        }
 
-                if (uiState.showRelated) {
-                    Spacer(Modifier.height(24.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color.Gray)
-                    Column(Modifier.padding(top = 8.dp)) {
-                        Text("Related Notes", style = MaterialTheme.typography.titleMedium)
-                        if (uiState.relatedNotes.isNotEmpty()) {
-                            RelatedNotesSection(
-                                relatedNotes = uiState.relatedNotes,
-                                onNoteClick = { note ->
-                                    navController.navigate("note/${note.id}")
+        // Bottom sheet for related notes
+        if (uiState.showRelated) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    viewModel.toggleShowRelated()
+                },
+                sheetState = sheetState
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Related Notes", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    if (uiState.relatedNotes.isNotEmpty()) {
+                        RelatedNotesSection(
+                            relatedNotes = uiState.relatedNotes,
+                            onNoteClick = { note ->
+                                coroutineScope.launch {
+                                    sheetState.hide()
+                                    viewModel.toggleShowRelated()
                                 }
-                            )
-                        } else {
-                            Text(
-                                text = "No related notes found.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                                navController.navigate("note/${note.id}")
+                            }
+                        )
+                    } else {
+                        Text(
+                            text = "No related notes found.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -217,12 +244,25 @@ fun TopBarSection(
             }
         }
 
-
-        Text(
-            text = "$dateTime | $category",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "$dateTime | $category",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (isPinned) {
+                Icon(
+                    imageVector = Pin,
+                    contentDescription = "Pinned",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
 
         Divider(
             modifier = Modifier
@@ -291,7 +331,7 @@ fun NoteEditorSection(
                         Text(
                             text = "Heading",
                             style = MaterialTheme.typography.headlineSmall.copy(
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
                             )
                         )
                     }
@@ -323,7 +363,7 @@ fun NoteEditorSection(
                             Text(
                                 text = "Start typing...",
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
                                 )
                             )
                         }
@@ -383,7 +423,8 @@ fun BottomBarSection(
     showHighlights: Boolean,
     onToggleRelated: () -> Unit,
     onToggleHighlight: () -> Unit,
-    onDetectActions: () -> Unit
+    onDetectActions: () -> Unit,
+    onTogglePin: () -> Unit
 ) {
     BottomAppBar(modifier = Modifier.height(68.dp)) {
         Row(
@@ -400,10 +441,12 @@ fun BottomBarSection(
                     tint = if (showRelated) MaterialTheme.colorScheme.primary else Color.Gray
                 )
             }
-            IconButton(onClick = onDetectActions) {
+            IconButton(onClick = onTogglePin) {
                 Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Detect Actions",
+                    Pin,
+                    contentDescription = "Pin note",
+                    tint = if (showRelated) MaterialTheme.colorScheme.primary else Color.Gray
+
                 )
             }
             IconButton(onClick = onToggleHighlight) {
