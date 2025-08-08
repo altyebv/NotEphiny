@@ -38,6 +38,7 @@ data class NotebookItem(
     val type: CategoryType,
 )
 
+
 @Composable
 fun CategorySelectorUI(
     userNotebooks: List<NotebookItem>,

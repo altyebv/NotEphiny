@@ -25,7 +25,7 @@ fun DeleteNoteDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Delete this note?",
+                text = "Delete ?",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
@@ -35,7 +35,7 @@ fun DeleteNoteDialog(
         },
         text = {
             Text(
-                text = "This note will be deleted. You can access it in the deleted notes within 30 days.",
+                text = "This item will be deleted. You can access it in the recently deleted within 30 days.",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium

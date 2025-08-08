@@ -11,14 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.*
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.zeros.notephiny.data.model.Note
-import com.zeros.notephiny.presentation.add_edit_note.AddEditScreen
 import com.zeros.notephiny.presentation.notes.NoteListScreen
-import com.zeros.notephiny.presentation.notes.NoteListViewModel
 import com.zeros.notephiny.core.util.Screen
-import com.zeros.notephiny.presentation.todo.TodoScreen
-import com.zeros.notephiny.presentation.add_edit_note.NoteScreen
 import com.zeros.notephiny.presentation.components.SettingsScreen
+import com.zeros.notephiny.presentation.add_edit_note.NoteAIScreen
+import com.zeros.notephiny.presentation.todo.TodoAiScreen
 
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -44,6 +41,21 @@ fun NavGraph(
             NoteListScreen(navController = navController, setFabClick = setFabClick)
         }
 
+//        composable(Screen.NoteAI.route) {
+//
+//            NoteAIScreen(
+//                category = "Ideas",
+//                navController = navController,
+//
+//            )
+//        }
+//        composable(Screen.TodoAI.route) {
+//            TodoAiScreen(
+//                navController = navController,
+//                setFabClick = setFabClick
+//            )
+//        }
+
         composable(
             route = Screen.Settings.route,
             enterTransition = { slideInHorizontally(initialOffsetX = { 300 }) + fadeIn() },
@@ -64,7 +76,11 @@ fun NavGraph(
             popEnterTransition = { slideInHorizontally(initialOffsetX = { -300 }) + fadeIn() },
             popExitTransition = { slideOutHorizontally(targetOffsetX = { 300 }) + fadeOut() },
         ) {
-            TodoScreen(navController = navController, setFabClick = setFabClick)
+//            TodoScreen(navController = navController, setFabClick = setFabClick)
+            TodoAiScreen(
+                navController = navController,
+                setFabClick = setFabClick
+            )
         }
 
         composable(
@@ -83,11 +99,17 @@ fun NavGraph(
             popEnterTransition = { slideInHorizontally(initialOffsetX = { -300 }) + fadeIn() },
             popExitTransition = { slideOutHorizontally(targetOffsetX = { 300 }) + fadeOut() },
         ) {
-            NoteScreen(
-                onNoteSaved = { navController.popBackStack() },
-                onBack = { navController.popBackStack() },
-                category = it.arguments?.getString("category") ?: "Journal",
-            )
+//            NoteScreen(
+//                onNoteSaved = { navController.popBackStack() },
+//                onBack = { navController.popBackStack() },
+//                category = it.arguments?.getString("category") ?: "Journal",
+//            )
+            NoteAIScreen(
+                category = "Ideas",
+                navController = navController,
+                setFabClick = setFabClick
+
+                )
 
         }
     }

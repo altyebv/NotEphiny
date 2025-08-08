@@ -16,7 +16,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zeros.notephiny.core.util.Screen
 
 @Composable
-fun BottomNavBar(navController: NavController) {
+fun BottomNavBar(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     NavigationBar {
