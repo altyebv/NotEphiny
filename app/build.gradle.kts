@@ -85,6 +85,10 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
+    // icons
+//    implementation("io.github.seiko:lucide-compose:1.0.0-beta02")
+
+
 
     // Hilt
     implementation(libs.dagger.hilt.android)
