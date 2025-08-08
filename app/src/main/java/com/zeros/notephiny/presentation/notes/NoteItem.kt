@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.ui.Alignment
 import com.zeros.notephiny.core.util.formatDateTime
+import com.zeros.notephiny.presentation.icons.Pin
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -42,12 +45,10 @@ fun NoteItem(
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     isSelected: Boolean,
-
+    modifier: Modifier = Modifier
 ) {
-    Log.d("NoteItem", "Note ${note.id} selected: $isSelected")
-
     ElevatedCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
@@ -58,7 +59,9 @@ fun NoteItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
+                .heightIn(min = 120.dp) // keeps cards from collapsing too much
         ) {
+            // Title + Content + Selection
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -66,7 +69,9 @@ fun NoteItem(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = note.title,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -86,28 +91,29 @@ fun NoteItem(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.weight(1f)) // pushes date row to the bottom
 
+            // Date row
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (note.isPinned) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Pinned",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-
                 Text(
                     text = formatDateTime(note.updatedAt),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (note.isPinned) {
+                    Spacer(modifier = Modifier.width(6.dp))  // Add space before the icon
+                    Icon(
+                        imageVector = Pin,
+                        contentDescription = "Pinned",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
 }
+
 
 
 

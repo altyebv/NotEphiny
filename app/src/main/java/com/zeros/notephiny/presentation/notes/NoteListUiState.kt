@@ -16,5 +16,4 @@ data class NoteListUiState(
     val sortOrder: SortOrder = SortOrder.CREATED,
     val mode: NoteListMode = NoteListMode.NORMAL,
     val selectedNoteIds: Set<Int> = emptySet(),
-
 )

@@ -41,6 +41,7 @@ fun NoteListLayout(
     mode: NoteListMode,
     onCancelMultiSelect: () -> Unit,
     onSelectAll: () -> Unit,
+    modifier: Modifier = Modifier
 
 ) {
 

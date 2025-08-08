@@ -15,6 +15,8 @@ import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.domain.repository.NoteRepository
 import com.zeros.notephiny.presentation.components.menus.MainScreenMenu
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,24 +28,54 @@ class NoteListViewModel @Inject constructor(
     private val categoryProvider: CategoryProvider
 ) : ViewModel() {
 
+    // ------------------------
+    // Public state & flows (kept for compatibility)
+    // ------------------------
     var recentlyDeletedNote: Note? = null
+
+    // query + ui flows the UI already uses
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     private val _selectedCategory = MutableStateFlow("All")
-    val selectedCategory: StateFlow<String> = _selectedCategory
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    // UI state object kept for other properties (sortOrder, mode, selectedNoteIds, etc.)
     private val _uiState = MutableStateFlow(NoteListUiState())
     val uiState: StateFlow<NoteListUiState> = _uiState.asStateFlow()
+
     private val _availableCategories = MutableStateFlow<List<String>>(emptyList())
     val availableCategories: StateFlow<List<String>> = _availableCategories.asStateFlow()
+
     private val _navigationEvent = MutableSharedFlow<NavigationEvent>()
     val navigationEvent = _navigationEvent.asSharedFlow()
 
     private val _categoryItems = MutableStateFlow<List<CategoryItem>>(emptyList())
     val categoryItems: StateFlow<List<CategoryItem>> = _categoryItems.asStateFlow()
 
+    // ------------------------
+    // Internal sources
+    // ------------------------
+    // live list of all notes (keeps track of DB updates)
+    private val _allNotes = MutableStateFlow<List<Note>>(emptyList())
+    val allNotes: StateFlow<List<Note>> = _allNotes.asStateFlow()
 
+    // search results (semantic + keyword). UI will display this when isSearching == true
+    private val _searchResults = MutableStateFlow<List<Note>>(emptyList())
+    private val searchResults: StateFlow<List<Note>> = _searchResults.asStateFlow()
+
+    // Combined "what to show" flow that UI will collect from (keeps previous name filteredNotes)
+    val filteredNotes: StateFlow<List<Note>>
+
+    // debounce/search job
+    private var searchJob: Job? = null
+
+    // ------------------------
+    // Sealed types & enums (kept)
+    // ------------------------
     sealed class NavigationEvent {
         object GoToSettings : NavigationEvent()
     }
@@ -58,47 +90,51 @@ class NoteListViewModel @Inject constructor(
         MULTI_SELECT
     }
 
+    // ------------------------
+    // Init
+    // ------------------------
+    init {
+        // build filteredNotes by combining sources:
+        filteredNotes = combine(
+            _allNotes,
+            searchResults,
+            _selectedCategory,
+            _isSearching,
+            _uiState
+        ) { all, search, selectedCategory, isSearching, uiState ->
+            val base = if (isSearching) search else all
+
+            // category filter
+            val categoryFiltered = if (selectedCategory == "All") base
+            else base.filter { it.category == selectedCategory }
+
+            // sorting
+            val sorted = when (uiState.sortOrder) {
+                SortOrder.CREATED -> categoryFiltered.sortedWith(
+                    compareByDescending<Note> { it.isPinned }.thenByDescending { it.createdAt }
+                )
+                SortOrder.EDITED -> categoryFiltered.sortedWith(
+                    compareByDescending<Note> { it.isPinned }.thenByDescending { it.updatedAt }
+                )
+            }
+
+            sorted
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        // start observers
+        observeNotes()
+        fetchAvailableCategories()
+        fetchCategoryItems()
+    }
+
+    // ------------------------
+    // Observers & helpers
+    // ------------------------
     private fun fetchCategoryItems() {
         viewModelScope.launch {
             val structured = categoryProvider.getStructuredCategories()
             _categoryItems.value = structured
         }
-    }
-
-    val filteredNotes = combine(
-        _uiState,
-        _selectedCategory,
-        _searchQuery
-    ) { uiState, category, query ->
-
-        val notes = uiState.notes
-
-        val filtered = notes.filter { note ->
-            val matchesCategory = category == "All" || note.category == category
-            val matchesQuery = note.title.contains(query, true) || note.content.contains(query, true)
-            matchesCategory && matchesQuery
-        }
-
-        when (uiState.sortOrder) {
-            SortOrder.CREATED -> filtered.sortedWith(
-                compareByDescending<Note> { it.isPinned }
-                    .thenByDescending { it.createdAt }
-            )
-            SortOrder.EDITED -> filtered.sortedWith(
-                compareByDescending<Note> { it.isPinned }
-                    .thenByDescending { it.updatedAt }
-            )
-        }
-
-    }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-
-
-    init {
-        observeNotes()
-        fetchAvailableCategories()
-        fetchCategoryItems()
     }
 
     private fun fetchAvailableCategories() {
@@ -123,31 +159,70 @@ class NoteListViewModel @Inject constructor(
                     preferencesManager.setWelcomeNoteAdded()
                 } else {
                     val sortedNotes = noteList.sortedWith(
-                        compareByDescending<Note> { it.isPinned }
-                            .thenByDescending { it.updatedAt }
+                        compareByDescending<Note> { it.isPinned }.thenByDescending { it.updatedAt }
                     )
+
+                    // update both the local allNotes container and the UI state notes (keeps compatibility)
+                    _allNotes.value = sortedNotes
                     _uiState.update { it.copy(notes = sortedNotes) }
                 }
             }
         }
     }
 
-    fun onMainMenuAction(action: MainScreenMenu) {
-        when (action) {
+    // ------------------------
+    // Public actions (search + category)
+    // ------------------------
+    fun startSearch() {
+        _isSearching.value = true
+        _uiState.update { it.copy(isSearching = true) } // keep uiState consistent
+    }
 
-            MainScreenMenu.SortByCreated -> {
-                _uiState.update { it.copy(sortOrder = SortOrder.CREATED) }
+    fun cancelSearch() {
+        _isSearching.value = false
+        _searchQuery.value = ""
+        // clear results and keep uiState consistent
+        _searchResults.value = emptyList()
+        _uiState.update { it.copy(isSearching = false, searchQuery = "", filteredNotes = emptyList()) }
+    }
+
+    /**
+     * Called when search query changes from UI.
+     * Debounces rapid updates and triggers repository.searchNotes(...) in background.
+     */
+
+    fun onSearchQueryChanged(query: String) {
+        val trimmed = query.trim()
+        _searchQuery.value = query
+        _uiState.update { it.copy(searchQuery = query) }
+
+        // Cancel previous debounce job
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            // Debounce to avoid excessive embedding calls
+            delay(300L)
+
+            // Avoid searching for very short/blank queries
+            if (trimmed.length < 3) {
+                _searchResults.value = emptyList()
+                _uiState.update { it.copy(filteredNotes = emptyList()) }
+                return@launch
             }
-            MainScreenMenu.SortByEdited -> {
-                _uiState.update { it.copy(sortOrder = SortOrder.EDITED) }
-            }
-            MainScreenMenu.Edit -> {
-                enterMultiSelectMode()
-            }
-            MainScreenMenu.Settings -> {
-                viewModelScope.launch {
-                    _navigationEvent.emit(NavigationEvent.GoToSettings)
-                }
+
+            try {
+                // Perform hybrid search without category filtering
+                val results = repository.searchNotes(
+                    query = trimmed,
+                    topK = 50,
+                    similarityThreshold = 0.75
+                )
+
+                _searchResults.value = results
+                _uiState.update { it.copy(filteredNotes = results) }
+
+            } catch (t: Throwable) {
+                _searchResults.value = emptyList()
+                _uiState.update { it.copy(filteredNotes = emptyList()) }
             }
         }
     }
@@ -155,11 +230,30 @@ class NoteListViewModel @Inject constructor(
 
 
 
+    fun selectCategory(category: String) {
+        _selectedCategory.value = category
+
+        // If searching, re-trigger search with new category filter
+        if (_isSearching.value && _searchQuery.value.isNotBlank()) {
+            onSearchQueryChanged(_searchQuery.value)
+        }
+    }
+
+
+    // ------------------------
+    // Note operations (kept from original)
+    // ------------------------
+    fun onMainMenuAction(action: MainScreenMenu) {
+        when (action) {
+            MainScreenMenu.SortByCreated -> _uiState.update { it.copy(sortOrder = SortOrder.CREATED) }
+            MainScreenMenu.SortByEdited -> _uiState.update { it.copy(sortOrder = SortOrder.EDITED) }
+            MainScreenMenu.Edit -> enterMultiSelectMode()
+            MainScreenMenu.Settings -> viewModelScope.launch { _navigationEvent.emit(NavigationEvent.GoToSettings) }
+        }
+    }
 
     fun deleteNote(note: Note) {
-        Log.d("NoteDelete", "Attempting to delete note with ID: ${note.id}")
         if (note.id == null) {
-            Log.e("NoteDelete", "❌ Cannot delete note with null ID")
             return
         }
         viewModelScope.launch {
@@ -183,59 +277,22 @@ class NoteListViewModel @Inject constructor(
     }
 
     fun exitMultiSelectMode() {
-        _uiState.update {
-            it.copy(
-                mode = NoteListMode.NORMAL,
-                selectedNoteIds = emptySet()
-            )
-        }
+        _uiState.update { it.copy(mode = NoteListMode.NORMAL, selectedNoteIds = emptySet()) }
     }
 
     fun toggleNoteSelection(noteId: Int) {
         _uiState.update { current ->
-            val updated = current.selectedNoteIds.toMutableSet()
-            if (updated.contains(noteId)) updated.remove(noteId)
-            else updated.add(noteId)
-
+            val updated = current.selectedNoteIds.toMutableSet().apply {
+                if (contains(noteId)) remove(noteId) else add(noteId)
+            }
             current.copy(selectedNoteIds = updated)
         }
     }
 
-
     fun selectAll() {
         val allNoteIds = _uiState.value.notes.mapNotNull { it.id }.toSet()
         _uiState.update { it.copy(selectedNoteIds = allNoteIds) }
-
-        val notes = _uiState.value.notes
     }
-
-
-    fun startSearch() {
-        _isSearching.value = true
-    }
-
-    fun cancelSearch() {
-        _isSearching.value = false
-        _searchQuery.value = ""
-    }
-
-    fun selectCategory(category: String) {
-        _selectedCategory.value = category
-        filteredNotes
-    }
-
-    fun onSearchQueryChanged(query: String) {
-        _searchQuery.value = query
-    }
-
-//    fun searchNotesBySemantic(query: String) {
-//        viewModelScope.launch {
-//            _uiState.update { it.copy(isLoading = true) }
-//            val results = repository.searchNotesBySemantic(query)
-//            _uiState.update { it.copy(notes = results, isLoading = false) }
-//        }
-//    }
-
-
 }
+
 

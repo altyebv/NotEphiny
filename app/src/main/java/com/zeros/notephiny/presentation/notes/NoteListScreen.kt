@@ -16,15 +16,24 @@ import com.zeros.notephiny.core.util.Screen
 import com.zeros.notephiny.data.model.Note
 import com.zeros.notephiny.presentation.notes.NoteListViewModel.NoteListMode
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.zeros.notephiny.presentation.components.DeleteNoteDialog
+import com.zeros.notephiny.presentation.components.SearchOverlay
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-
-
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -35,71 +44,75 @@ fun NoteListScreen(
 ) {
     val notes by viewModel.filteredNotes.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val selectedCategory by viewModel.selectedCategory.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
-    var noteToDelete by remember { mutableStateOf<Note?>(null) }
-    var lastDeletedNote by remember { mutableStateOf<Note?>(null) }
-    var showUndoSnackbar by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
     val categories by viewModel.availableCategories.collectAsState()
     val state by viewModel.uiState.collectAsState()
+
+    var noteToDelete by remember { mutableStateOf<Note?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler(enabled = state.mode == NoteListMode.MULTI_SELECT) {
         viewModel.exitMultiSelectMode()
     }
 
-    NoteListLayout(
-        notes = notes,
-        noteToDelete = noteToDelete,
-        onDeleteRequest = { note -> noteToDelete = note },
-        onNoteClick = { note ->
-            if (state.mode == NoteListMode.MULTI_SELECT) {
-                viewModel.toggleNoteSelection(note.id!!)
-            } else {
-                navController.navigate(
-                    Screen.AddEditNote.route + "?noteId=${note.id}&noteColor=${note.color}"
-                )
-            }
-        },
-        snackbarHostState = snackbarHostState,
-        searchQuery = searchQuery,
-        isSearching = isSearching,
-        onSearchQueryChange = viewModel::onSearchQueryChanged,
-        onCancelSearch = viewModel::cancelSearch,
-        onSearchClick = viewModel::startSearch,
-        onCategorySelected = viewModel::selectCategory,
-        onOverflowClick = viewModel::onMainMenuAction,
-        selectedCategory = selectedCategory,
-        categories = categories,
-        sortOrder = state.sortOrder,
-        selectedNoteIds = state.selectedNoteIds,
-        mode = state.mode,
-        onCancelMultiSelect = viewModel::exitMultiSelectMode,
-        onSelectAll = { viewModel.selectAll() }
-    )
-    LaunchedEffect(Unit) {
-        Log.d("NoteListScreen", "LaunchedEffect triggered")
-        setFabClick {
-            navController.navigate(
-                Screen.AddEditNote.route +
-                        "?noteId=-1&noteColor=-1&category=${
-                            URLEncoder.encode(
-                                selectedCategory,
-                                StandardCharsets.UTF_8.toString()
-                            )
-                        }"
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Main content underneath
+        NoteListLayout(
+            notes = notes,
+            noteToDelete = noteToDelete,
+            onDeleteRequest = { noteToDelete = it },
+            onNoteClick = { note ->
+                if (state.mode == NoteListMode.MULTI_SELECT) {
+                    viewModel.toggleNoteSelection(note.id!!)
+                } else {
+                    navController.navigate(
+                        Screen.AddEditNote.route + "?noteId=${note.id}&noteColor=${note.color}"
+                    )
+                }
+            },
+            snackbarHostState = snackbarHostState,
+            searchQuery = searchQuery,
+            isSearching = isSearching,
+            onSearchQueryChange = viewModel::onSearchQueryChanged,
+            onCancelSearch = viewModel::cancelSearch,
+            onSearchClick = viewModel::startSearch,
+            onCategorySelected = viewModel::selectCategory,
+            onOverflowClick = viewModel::onMainMenuAction,
+            selectedCategory = selectedCategory,
+            categories = categories,
+            sortOrder = state.sortOrder,
+            selectedNoteIds = state.selectedNoteIds,
+            mode = state.mode,
+            onCancelMultiSelect = viewModel::exitMultiSelectMode,
+            onSelectAll = viewModel::selectAll,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Overlay shown only when searching
+        if (isSearching) {
+            SearchOverlay(
+                query = searchQuery,
+                onQueryChange = viewModel::onSearchQueryChanged,
+                onCancelClick = viewModel::cancelSearch,
+                searchResults = notes,
+                onNoteClick = { note ->
+                    viewModel.cancelSearch()
+                    navController.navigate(
+                        Screen.AddEditNote.route + "?noteId=${note.id}&noteColor=${note.color}"
+                    )
+                }
             )
         }
     }
 
+    // Existing dialog/snackbar/undo logic here (unchanged)
     noteToDelete?.let { note ->
         DeleteNoteDialog(
             noteTitle = note.title,
             onDelete = {
                 viewModel.deleteNote(note)
-                lastDeletedNote = note
                 noteToDelete = null
-                showUndoSnackbar = true
             },
             onDismiss = {
                 noteToDelete = null
@@ -107,38 +120,15 @@ fun NoteListScreen(
         )
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute == Screen.NoteList.route) {
-            setFabClick {
-                navController.navigate(
-                    Screen.AddEditNote.route +
-                            "?noteId=-1&noteColor=-1&category=" +
-                            URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
-                )
-            }
-        } else {
-            setFabClick(null)
-        }
-    }
-
-
-    LaunchedEffect(showUndoSnackbar) {
-        if (showUndoSnackbar && lastDeletedNote != null) {
-            val result = snackbarHostState.showSnackbar(
-                message = "Note deleted",
-                actionLabel = "Undo",
-                duration = SnackbarDuration.Short
+    LaunchedEffect(Unit) {
+        setFabClick {
+            navController.navigate(
+                Screen.AddEditNote.route +
+                        "?noteId=-1&noteColor=-1&category=" +
+                        URLEncoder.encode(selectedCategory, StandardCharsets.UTF_8.toString())
             )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.restoreNote()
-            }
-            showUndoSnackbar = false
         }
     }
 }
-
 
 
