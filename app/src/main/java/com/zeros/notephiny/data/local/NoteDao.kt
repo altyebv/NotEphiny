@@ -14,6 +14,22 @@ interface NoteDao {
     @Query("SELECT DISTINCT category FROM notes")
     suspend fun getAllCategories(): List<String>
 
+    @Query("""
+    SELECT * FROM notes
+    WHERE title LIKE '%' || :query || '%' 
+       OR content LIKE '%' || :query || '%'
+    ORDER BY isPinned DESC, updatedAt DESC
+""")
+    suspend fun searchNotesByKeyword(query: String): List<Note>
+
+    @Query("SELECT * FROM notes WHERE (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') AND category = :category")
+    suspend fun searchNotesByKeywordAndCategory(query: String, category: String): List<Note>
+
+    @Query("SELECT * FROM notes WHERE embedding IS NOT NULL AND category = :category")
+    suspend fun getNotesWithEmbeddingsByCategory(category: String): List<Note>
+
+
+
     @Query("UPDATE notes SET isPinned = :pinned WHERE id = :noteId")
     suspend fun updatePin(noteId: Int, pinned: Boolean)
 
@@ -26,6 +42,11 @@ interface NoteDao {
     @Query("SELECT * FROM notes")
     suspend fun getAllNotesOnce(): List<Note>
 
+    @Query("SELECT * FROM notes WHERE embedding IS NOT NULL AND id != :excludeId")
+    suspend fun getNotesWithEmbeddingsExcluding(excludeId: Int): List<Note>
+
+    @Query("SELECT * FROM notes WHERE embedding IS NOT NULL")
+    suspend fun getNotesWithEmbeddings(): List<Note>
 
 
     @Query("DELETE FROM notes WHERE id = :noteId")

@@ -14,7 +14,9 @@ data class Note(
     val embedding: List<Float>? = null,
     val category: String = "Journal",
     val color: Int = 0xFFFFF9C4.toInt(),
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val isLocked: Boolean = false,
+    val similarity: Float? = null
 ) {
     companion object {
         val noteColors = listOf(

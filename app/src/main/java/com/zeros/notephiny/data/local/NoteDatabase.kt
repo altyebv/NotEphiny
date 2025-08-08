@@ -8,8 +8,9 @@ import com.zeros.notephiny.data.model.Todo
 
 @Database(
     entities = [Note::class, Todo::class],
-    version = 6,
-    exportSchema = false)
+    version = 2,
+    exportSchema = false
+)
 
 @TypeConverters(Converters::class)
 abstract class NoteDatabase : RoomDatabase() {
