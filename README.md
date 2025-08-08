@@ -19,7 +19,7 @@ Notephiny is a minimalist, semantic-first note-taking Android app built using **
 
 > ![photo_2025-08-09_01-21-14](https://github.com/user-attachments/assets/5f04a347-0313-447d-b28b-bfb6e3416360)
 
-> ![photo_2025-08-09_01-21-14](https://github.com/user-attachments/assets/c93ab78e-4698-42bd-96fe-57d559a78d3d)
+> ![photo_2025-08-09_01-23-53](https://github.com/user-attachments/assets/f32fb402-d8d2-4424-85ca-e72887923037)
 
 > ![photo_2025-08-09_01-23-48](https://github.com/user-attachments/assets/e58a886f-8ca1-4fd9-994b-5b1480d6555b)
 
