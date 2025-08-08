@@ -56,7 +56,7 @@ fun NotephinyApp(
 
     val showBottomBar = currentRoute in listOf(
         Screen.NoteList.route,
-        Screen.TodoList.route // Add this route to your Screen object
+        Screen.TodoList.route
     )
     var fabClick by remember { mutableStateOf<(() -> Unit)?>(null) }
 
@@ -65,7 +65,10 @@ fun NotephinyApp(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
             if (showBottomBar) {
-                BottomNavBar(navController = navController)
+                BottomNavBar(
+                    modifier = Modifier.navigationBarsPadding(),
+                    navController = navController
+                )
             }
         },
         floatingActionButton = {

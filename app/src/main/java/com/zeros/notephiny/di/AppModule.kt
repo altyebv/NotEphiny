@@ -37,7 +37,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTodoDao(db: NoteDatabase): TodoDao = db.todoDao() // ✅ Added this
+    fun provideTodoDao(db: NoteDatabase): TodoDao = db.todoDao()
 
     @Provides
     @Singleton

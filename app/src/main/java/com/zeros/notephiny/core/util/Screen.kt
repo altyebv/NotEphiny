@@ -10,6 +10,8 @@ sealed class Screen(val route: String) {
     object AddEditNote : Screen("note_screen")
     object TodoList : Screen("todo_list")
     object Settings : Screen("settings")
+    object NoteAI : Screen("note_ai")
+    object TodoAI : Screen("todo_ai")
 }
 sealed class BottomNavItem(
     val route: String,
@@ -23,3 +25,5 @@ sealed class BottomNavItem(
         val items = listOf(Notes, Todos)
     }
 }
+
+
