@@ -261,12 +261,6 @@ fun TodoTopSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // ✅ Directly use CategoryChips without wrapping it in another scrollable row
-            CategoryChips(
-                selectedCategory = selectedCategory,
-                onCategorySelected = onCategorySelected,
-                modifier = Modifier.padding(top = 8.dp)
-            )
         }
     }
 }
